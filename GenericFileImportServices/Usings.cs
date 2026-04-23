@@ -1,0 +1,10 @@
+﻿global using GenericFileImportServices.Contracts;
+global using GenericFileImportServices.Models;
+global using GenericFileImportServices.Models.Database.Base;
+global using GenericRepositories.Interfaces;
+global using MagellanFileServices.Contracts;
+global using MagellanFileServices.Models;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Logging;
+global using System.Text;
+global using System.Diagnostics.CodeAnalysis;

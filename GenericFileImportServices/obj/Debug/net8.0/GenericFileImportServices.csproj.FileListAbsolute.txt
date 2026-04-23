@@ -1,0 +1,13 @@
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.csproj.AssemblyReference.cache
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.AssemblyInfoInputs.cache
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.AssemblyInfo.cs
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.csproj.CoreCompileInputs.cache
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.sourcelink.json
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\bin\Debug\net8.0\GenericFileImportServices.deps.json
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\bin\Debug\net8.0\GenericFileImportServices.dll
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\bin\Debug\net8.0\GenericFileImportServices.pdb
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.dll
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\refint\GenericFileImportServices.dll
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\GenericFileImportServices.pdb
+C:\Users\tdev6f9\source\repos\generic-file-importer\GenericFileImportServices\obj\Debug\net8.0\ref\GenericFileImportServices.dll
