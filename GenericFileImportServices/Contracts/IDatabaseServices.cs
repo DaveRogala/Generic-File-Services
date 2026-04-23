@@ -7,5 +7,5 @@ public interface IDatabaseServices<T,C>
 {
     Task<List<T>> GetAllEntitiesAsync();
     Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate);
-    Task<int> UpdateDatabaseAsync(List<T> existingEntities, List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false);
+    Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false);
 }

@@ -73,7 +73,7 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, "Error reading from file");
             throw;
         }
     }
@@ -98,7 +98,7 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, "Error reading from file");
             throw;
         }
     }

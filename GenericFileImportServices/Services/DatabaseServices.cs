@@ -21,7 +21,7 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, "Error finding entities");
             throw;
         }
     }
@@ -33,11 +33,11 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, "Error retrieving all entities");
             throw;
         }
     }
-    public async Task<int> UpdateDatabaseAsync(List<T> existingEntities, List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete= false)
+    public async Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false)
     {
         try
         {
@@ -71,7 +71,7 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex, "Error updating database");
             throw;
         }
     }

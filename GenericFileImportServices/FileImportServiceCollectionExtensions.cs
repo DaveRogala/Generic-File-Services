@@ -10,7 +10,7 @@ namespace GenericFileImportServices
         public static IServiceCollection AddFileImportServices<T,U,M,F>(this IServiceCollection services, Action<DbContextOptionsBuilder> options)
             where T : BaseObject
             where M : DbContext
-            where F : FileImportServices<T, U,M>
+            where F : class, IFileImportServices<T, U, M>
         {
             if(!services.Any(s => s.ServiceType == typeof(IDbContextFactory<M>)))
             {
