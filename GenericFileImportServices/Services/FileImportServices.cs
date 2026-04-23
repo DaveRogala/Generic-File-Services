@@ -1,8 +1,17 @@
-
 using GenericFileImportServices.Models;
 
 namespace GenericFileImportServices.Services;
 
+/// <summary>
+/// Abstract base class for file-to-database ETL import services.
+/// Handles file discovery, parsing, database reconciliation, and file archiving or error reporting.
+/// Consumers extend this class and implement <see cref="GetAddEntities"/>,
+/// <see cref="GetUpdateEntities"/>, and <see cref="GetDeleteEntities"/> to define
+/// how file rows map to database changes.
+/// </summary>
+/// <typeparam name="T">Entity type. Must extend <see cref="GenericFileImportServices.Models.Database.Base.BaseObject"/>.</typeparam>
+/// <typeparam name="U">DTO type that each parsed file row maps to.</typeparam>
+/// <typeparam name="C">EF Core <see cref="DbContext"/> type.</typeparam>
 public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     where T : BaseObject
     where C : DbContext
@@ -11,17 +20,17 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     internal readonly IFileReaderServices<U> _fileReaderServices;
     internal readonly ILogger<FileImportServices<T, U, C>> _logger;
 
-
-    public FileImportServices( IDatabaseServices<T,C> databaseServices,
-                              IFileReaderServices<U> fileReaderServices,
-                              ILogger<FileImportServices<T, U, C>> logger
-                              )
+    protected FileImportServices(
+        IDatabaseServices<T, C> databaseServices,
+        IFileReaderServices<U> fileReaderServices,
+        ILogger<FileImportServices<T, U, C>> logger)
     {
         _fileReaderServices = fileReaderServices;
         _databaseServices = databaseServices;
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
@@ -74,6 +83,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
+    /// <inheritdoc/>
     public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
@@ -123,46 +133,77 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
-    public abstract List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos);
-    public abstract List<T> GetUpdateEntities(List<T> existingEntities, List<U> dtos);
+    /// <summary>
+    /// Returns the entities to insert — rows present in <paramref name="dtos"/> but absent from <paramref name="existingEntities"/>.
+    /// </summary>
     public abstract List<T> GetAddEntities(List<T> existingEntities, List<U> dtos);
 
+    /// <summary>
+    /// Returns the entities to update — rows present in both <paramref name="existingEntities"/> and <paramref name="dtos"/>,
+    /// with field changes already applied to the returned entities.
+    /// </summary>
+    public abstract List<T> GetUpdateEntities(List<T> existingEntities, List<U> dtos);
+
+    /// <summary>
+    /// Returns the entities to delete — rows present in <paramref name="existingEntities"/> but absent from <paramref name="dtos"/>.
+    /// </summary>
+    public abstract List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos);
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool hardDelete)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool firstLineContainsEncoding, bool hardDelete)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool failIfNotFound, bool firstLineContainsEncoding, bool archiveIfSuccess)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip);
     }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool fixUnescapedQuotes, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes);

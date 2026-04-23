@@ -1,39 +1,49 @@
-﻿
 namespace GenericFileImportServices.Services;
 
-public class FileReaderServices<U>  : IFileReaderServices<U>
-
-{ 
+/// <summary>
+/// Default implementation of <see cref="IFileReaderServices{U}"/>.
+/// Delegates file I/O and parsing to <c>MagellanFileServices.IFileServices</c>,
+/// adding structured logging and a typed <see cref="FileResults{U}"/> wrapper.
+/// Override <see cref="ReadFromFile(string,string,Encoding,string,bool,bool,bool,int,bool)"/>
+/// to supply custom parsing logic (e.g. fixed-width or multi-section files).
+/// </summary>
+/// <typeparam name="U">DTO type that each parsed row maps to.</typeparam>
+public class FileReaderServices<U> : IFileReaderServices<U>
+{
     private protected readonly IFileServices _fileServices;
     private protected readonly ILogger<FileReaderServices<U>> _logger;
-    
-    public FileReaderServices(IFileServices fileServices, ILogger<FileReaderServices<U>> logger)
 
+    public FileReaderServices(IFileServices fileServices, ILogger<FileReaderServices<U>> logger)
     {
         _fileServices = fileServices;
         _logger = logger;
-    }    
-    
+    }
+
+    /// <inheritdoc/>
     public void HandleFileError(string basePath, string fileName, string exceptionMessage, string timeStamp, List<string>? errors = null)
     {
         _fileServices.HandleFileError(basePath, fileName, exceptionMessage, timeStamp, errors);
     }
 
+    /// <inheritdoc/>
     public void HandleFileSuccess(string basePath, string fileName, string timeStamp)
     {
         _fileServices.HandleFileSuccess(basePath, fileName, timeStamp);
     }
 
+    /// <inheritdoc/>
     public async Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp)
     {
         await _fileServices.HandleFileSuccessAsync(stream, blobConnectionString, containerName, filePath, timeStamp);
     }
 
+    /// <inheritdoc/>
     public async Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null)
     {
-        await _fileServices.HandlFileErrorAsync(stream,blobConnectionString,containerName,filePath, exceptionMessage, timeStamp, errors);
+        await _fileServices.HandlFileErrorAsync(stream, blobConnectionString, containerName, filePath, exceptionMessage, timeStamp, errors);
     }
 
+    /// <inheritdoc/>
     public virtual List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
@@ -78,23 +88,19 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
         }
     }
 
-
+    /// <inheritdoc/>
     public List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, bool firstLineContainsEncoding, bool failIfFileMissing = true)
     {
         return ReadFromFile(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfFileMissing, multipleFiles: false);
     }
 
+    /// <inheritdoc/>
     public List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
         {
-            List<FileResults<U>> fileResults = [];
             ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes);
-
-            return [new(importResult,fileName)];
-
-            
-
+            return [new(importResult, fileName)];
         }
         catch (Exception ex)
         {

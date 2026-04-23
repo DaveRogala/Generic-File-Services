@@ -1,18 +1,26 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 
 namespace GenericFileImportServices.Services;
 
+/// <summary>
+/// Default implementation of <see cref="IDatabaseServices{T,C}"/>.
+/// Delegates persistence to <see cref="IGenericRepository{T,C}"/> and stamps UTC timestamps
+/// on all mutations via the <see cref="BaseObject"/> audit fields.
+/// </summary>
 public class DatabaseServices<T, C> : IDatabaseServices<T, C>
     where T : BaseObject
     where C : DbContext
 {
     private readonly IGenericRepository<T, C> _repository;
     private readonly ILogger<DatabaseServices<T, C>> _logger;
-    public DatabaseServices(IGenericRepository<T,C> repository,ILogger<DatabaseServices<T,C>> logger)
+
+    public DatabaseServices(IGenericRepository<T, C> repository, ILogger<DatabaseServices<T, C>> logger)
     {
         _logger = logger;
         _repository = repository;
     }
+
+    /// <inheritdoc/>
     public async Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate)
     {
         try
@@ -25,6 +33,8 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
             throw;
         }
     }
+
+    /// <inheritdoc/>
     public async Task<List<T>> GetAllEntitiesAsync()
     {
         try
@@ -37,11 +47,13 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
             throw;
         }
     }
+
+    /// <inheritdoc/>
     public async Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false)
     {
         try
         {
-            DateTime utcNow = DateTime.UtcNow;            
+            DateTime utcNow = DateTime.UtcNow;
 
             foreach (T entity in updateEntities)
             {
