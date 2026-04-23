@@ -22,7 +22,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         _logger = logger;
     }
 
-    public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false)
+    public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
         {
@@ -30,7 +30,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             ArgumentException.ThrowIfNullOrWhiteSpace(containerName, nameof(containerName));
             ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
 
-            FileResults<U>? fileResult = _fileReaderServices.ReadFromFile(stream, Path.GetFileName(filePath), encoding, firstLineContainsEncoding, delimiter).FirstOrDefault();
+            FileResults<U>? fileResult = _fileReaderServices.ReadFromFile(stream, Path.GetFileName(filePath), encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes).FirstOrDefault();
 
             if (fileResult is not null)
             {
@@ -74,14 +74,14 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
-    public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false)
+    public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(basePath, nameof(basePath));
             ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern);
             //TODO account for wanting entire file to fail if line errors
-            var fileResults = _fileReaderServices.ReadFromFile(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: firstLineContainsEncoding, failIfFileMissing: failIfNotFound, multipleFiles);
+            var fileResults = _fileReaderServices.ReadFromFile(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: firstLineContainsEncoding, failIfFileMissing: failIfNotFound, multipleFiles, rowsToSkip: rowsToSkip, fixUnescapedQuotes: fixUnescapedQuotes);
             List<string> errors = [..fileResults.SelectMany(f => f.Errors.Select(e => $"File: {f.FileName}: Error; {e}"))];
 
             List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
@@ -158,5 +158,13 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool failIfNotFound, bool firstLineContainsEncoding, bool archiveIfSuccess)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound, multipleFiles: false, archiveIfSuccess);
+    }
+    public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool archiveIfSuccess = true)
+    {
+        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip);
+    }
+    public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool fixUnescapedQuotes, bool archiveIfSuccess = true)
+    {
+        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes);
     }
 }

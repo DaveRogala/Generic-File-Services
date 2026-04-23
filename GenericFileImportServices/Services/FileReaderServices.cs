@@ -34,7 +34,7 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
         await _fileServices.HandlFileErrorAsync(stream,blobConnectionString,containerName,filePath, exceptionMessage, timeStamp, errors);
     }
 
-    public virtual List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false)
+    public virtual List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
         {
@@ -61,7 +61,7 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
             {
                 _logger.LogInformation("Processing file {fileName}", file.Name);
 
-                ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, firstLineContainsEncoding, delimiter);
+                ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes);
 
                 fileResults.Add(new(importResult, file.Name));
                 if (importResult.Errors.Count > 0)
@@ -84,12 +84,12 @@ public class FileReaderServices<U>  : IFileReaderServices<U>
         return ReadFromFile(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfFileMissing, multipleFiles: false);
     }
 
-    public List<FileResults<U>> ReadFromFile(Stream stream,string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",")
+    public List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
         {
             List<FileResults<U>> fileResults = [];
-            ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(stream,encoding,firstLineContainsEncoding, delimiter);
+            ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes);
 
             return [new(importResult,fileName)];
 
