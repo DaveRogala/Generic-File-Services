@@ -58,6 +58,7 @@ public class BaseObjectTests
     // Minimal concrete subclass to exercise the protected parameterised constructor.
     private sealed class BaseObjectSubclass : BaseObject
     {
+        [SetsRequiredMembers]
         public BaseObjectSubclass(DateTime added, DateTime updated) : base(added, updated) { }
     }
 }

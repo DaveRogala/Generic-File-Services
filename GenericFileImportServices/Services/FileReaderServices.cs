@@ -13,6 +13,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     private protected readonly IFileServices _fileServices;
     private protected readonly ILogger<FileReaderServices<U>> _logger;
 
+    /// <summary>Initializes a new instance with the required collaborators.</summary>
     public FileReaderServices(IFileServices fileServices, ILogger<FileReaderServices<U>> logger)
     {
         _fileServices = fileServices;
@@ -34,13 +35,15 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     /// <inheritdoc/>
     public async Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp)
     {
-        await _fileServices.HandleFileSuccessAsync(stream, blobConnectionString, containerName, filePath, timeStamp);
+        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
+        await _fileServices.HandleFileSuccessAsync(containerClient, filePath, timeStamp);
     }
 
     /// <inheritdoc/>
     public async Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null)
     {
-        await _fileServices.HandlFileErrorAsync(stream, blobConnectionString, containerName, filePath, exceptionMessage, timeStamp, errors);
+        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
+        await _fileServices.HandleFileErrorAsync(containerClient, filePath, exceptionMessage, timeStamp, errors);
     }
 
     /// <inheritdoc/>
@@ -49,7 +52,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         try
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(basePath, nameof(basePath));
-            ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern);
+            ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern, nameof(fileNamePattern));
             DirectoryInfo di = new(basePath);
             List<FileInfo> files = di.GetFiles(fileNamePattern).ToList();
             List<FileResults<U>> fileResults = [];
@@ -71,7 +74,9 @@ public class FileReaderServices<U> : IFileReaderServices<U>
             {
                 _logger.LogInformation("Processing file {fileName}", file.Name);
 
-                ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes);
+                ObjectResult<U> importResult = rowsToSkip > 0 || fixUnescapedQuotes
+                    ? _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
+                    : _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, firstLineContainsEncoding, delimiter);
 
                 fileResults.Add(new(importResult, file.Name));
                 if (importResult.Errors.Count > 0)
@@ -99,7 +104,9 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     {
         try
         {
-            ObjectResult<U> importResult = _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter, rowsToSkip, fixUnescapedQuotes);
+            ObjectResult<U> importResult = rowsToSkip > 0 || fixUnescapedQuotes
+                ? _fileServices.GetDataFromFile<U>(stream, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
+                : _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter);
             return [new(importResult, fileName)];
         }
         catch (Exception ex)

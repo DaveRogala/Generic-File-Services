@@ -16,10 +16,11 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     where T : BaseObject
     where C : DbContext
 {
-    internal readonly IDatabaseServices<T, C> _databaseServices;
-    internal readonly IFileReaderServices<U> _fileReaderServices;
-    internal readonly ILogger<FileImportServices<T, U, C>> _logger;
+    private readonly IDatabaseServices<T, C> _databaseServices;
+    private readonly IFileReaderServices<U> _fileReaderServices;
+    private readonly ILogger<FileImportServices<T, U, C>> _logger;
 
+    /// <summary>Initializes a new instance with the required collaborators.</summary>
     protected FileImportServices(
         IDatabaseServices<T, C> databaseServices,
         IFileReaderServices<U> fileReaderServices,
@@ -89,7 +90,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         try
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(basePath, nameof(basePath));
-            ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern);
+            ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern, nameof(fileNamePattern));
             //TODO account for wanting entire file to fail if line errors
             var fileResults = _fileReaderServices.ReadFromFile(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: firstLineContainsEncoding, failIfFileMissing: failIfNotFound, multipleFiles, rowsToSkip: rowsToSkip, fixUnescapedQuotes: fixUnescapedQuotes);
             List<string> errors = [..fileResults.SelectMany(f => f.Errors.Select(e => $"File: {f.FileName}: Error; {e}"))];

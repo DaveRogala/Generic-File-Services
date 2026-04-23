@@ -52,14 +52,14 @@ public class FileImportServicesTests
     public async Task ProcessFileAsync_Throws_WhenBasePathIsEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ProcessFileAsync("", Pattern, Encoding.UTF8));
+            _sut.ProcessFileAsync("", Pattern, Encoding.UTF8, firstLineContainsEncoding: false));
     }
 
     [Fact]
     public async Task ProcessFileAsync_Throws_WhenPatternIsEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ProcessFileAsync(BasePath, "", Encoding.UTF8));
+            _sut.ProcessFileAsync(BasePath, "", Encoding.UTF8, firstLineContainsEncoding: false));
     }
 
     // ── Happy path ───────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ public class FileImportServicesTests
         SetupExistingEntities();
         SetupReader(MakeResult("data.csv", [new TestDto { Name = "Alice" }]));
 
-        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8);
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
 
         Assert.Empty(errors);
     }
@@ -82,7 +82,7 @@ public class FileImportServicesTests
         SetupExistingEntities(existing);
         SetupReader(MakeResult("data.csv", [new TestDto { Name = "New" }]));
 
-        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8);
+        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
 
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.Is<List<TestEntity>>(adds => adds.Any(e => e.Name == "New")),
@@ -98,7 +98,7 @@ public class FileImportServicesTests
         SetupExistingEntities();
         SetupReader(MakeResult("data.csv", [new TestDto { Name = "X" }]));
 
-        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, archiveIfSuccess: true);
+        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false, archiveIfSuccess: true);
 
         _readerMock.Verify(
             r => r.HandleFileSuccess(BasePath, "data.csv", It.IsAny<string>()),
@@ -111,7 +111,7 @@ public class FileImportServicesTests
         SetupExistingEntities();
         SetupReader(MakeResult("data.csv", [new TestDto { Name = "X" }]));
 
-        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, archiveIfSuccess: false);
+        await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false, archiveIfSuccess: false);
 
         _readerMock.Verify(
             r => r.HandleFileSuccess(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
@@ -126,7 +126,7 @@ public class FileImportServicesTests
         SetupExistingEntities();
         SetupReader(MakeResult("data.csv", [], ["row 3: bad value"]));
 
-        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8);
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
 
         _readerMock.Verify(
             r => r.HandleFileError(BasePath, "data.csv", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()),
@@ -144,7 +144,7 @@ public class FileImportServicesTests
             It.IsAny<List<TestEntity>>(), It.IsAny<bool>()))
             .ThrowsAsync(new InvalidOperationException("constraint violation"));
 
-        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8);
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
 
         _readerMock.Verify(
             r => r.HandleFileError(BasePath, "data.csv", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()),

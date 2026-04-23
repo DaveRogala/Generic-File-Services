@@ -1,38 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj": {}
+    "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj": {}
   },
   "projects": {
-    "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj": {
+    "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj": {
       "version": "2.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj",
+        "projectUniqueName": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj",
         "projectName": "GenericFileImportServices",
-        "projectPath": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj",
-        "packagesPath": "C:\\Users\\tdev6f9\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\obj\\",
+        "projectPath": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj",
+        "packagesPath": "/Users/davidrogala/.nuget/packages/",
+        "outputPath": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\tdev6f9\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Volumes/External Drive/Source/repos/Generic-File-Services/NuGet.Config",
+          "/Users/davidrogala/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://artifactory-saas.mtb.com/artifactory/api/nuget/v3/m4g-nuget-dev/index.json": {},
-          "https://artifactory-saas.mtb.com/artifactory/api/nuget/v3/m4g-nuget-prod/index.json": {}
+          "/Users/davidrogala/LocalNuGet": {},
+          "/Volumes/External Drive/Source/nuget/packages": {},
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
-            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -51,16 +45,19 @@
       },
       "frameworks": {
         "net10.0": {
-          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
+            "Azure.Storage.Blobs": {
+              "target": "Package",
+              "version": "[12.25.1, )"
+            },
             "GenericRepositories": {
               "target": "Package",
-              "version": "[10.1.1, )"
+              "version": "[10.0.6, )"
             },
             "MagellanFileServices": {
               "target": "Package",
-              "version": "[3.1.0, )"
+              "version": "[3.0.0, )"
             }
           },
           "imports": [
@@ -79,7 +76,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.203/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

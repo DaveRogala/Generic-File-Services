@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using GenericFileImportServices.Services;
 using GenericFileImportServices.Tests.TestHelpers;
 using GenericRepositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -9,7 +10,7 @@ namespace GenericFileImportServices.Tests.Services;
 
 public class DatabaseServicesTests
 {
-    private readonly Mock<IGenericRepository<TestEntity, TestDbContext>> _repositoryMock = new();
+    private readonly Mock<IGenericRepository<TestEntity, TestDbContext, int>> _repositoryMock = new();
     private readonly Mock<ILogger<DatabaseServices<TestEntity, TestDbContext>>> _loggerMock = new();
     private readonly DatabaseServices<TestEntity, TestDbContext> _sut;
 
@@ -28,7 +29,9 @@ public class DatabaseServicesTests
             new() { Name = "Alpha" },
             new() { Name = "Beta" }
         };
-        _repositoryMock.Setup(r => r.AllAsync()).ReturnsAsync(entities);
+        _repositoryMock
+            .Setup(r => r.AllAsync(It.IsAny<QueryTrackingBehavior>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entities);
 
         var result = await _sut.GetAllEntitiesAsync();
 
@@ -40,7 +43,9 @@ public class DatabaseServicesTests
     [Fact]
     public async Task GetAllEntitiesAsync_LogsAndRethrows_WhenRepositoryThrows()
     {
-        _repositoryMock.Setup(r => r.AllAsync()).ThrowsAsync(new InvalidOperationException("db error"));
+        _repositoryMock
+            .Setup(r => r.AllAsync(It.IsAny<QueryTrackingBehavior>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("db error"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.GetAllEntitiesAsync());
     }
@@ -52,7 +57,10 @@ public class DatabaseServicesTests
     {
         var entities = new List<TestEntity> { new() { Name = "Match" } };
         _repositoryMock
-            .Setup(r => r.FindAsync(It.IsAny<Expression<Func<TestEntity, bool>>>()))
+            .Setup(r => r.FindAsync(
+                It.IsAny<Expression<Func<TestEntity, bool>>>(),
+                It.IsAny<QueryTrackingBehavior>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(entities);
 
         var result = await _sut.FindEntitiesAsync(e => e.Name == "Match");
@@ -65,7 +73,10 @@ public class DatabaseServicesTests
     public async Task FindEntitiesAsync_LogsAndRethrows_WhenRepositoryThrows()
     {
         _repositoryMock
-            .Setup(r => r.FindAsync(It.IsAny<Expression<Func<TestEntity, bool>>>()))
+            .Setup(r => r.FindAsync(
+                It.IsAny<Expression<Func<TestEntity, bool>>>(),
+                It.IsAny<QueryTrackingBehavior>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db error"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -78,20 +89,28 @@ public class DatabaseServicesTests
     public async Task UpdateDatabaseAsync_CallsAddAsync_ForEachAddEntity()
     {
         var toAdd = new List<TestEntity> { new() { Name = "New" } };
-        _repositoryMock.Setup(r => r.AddAsync(It.IsAny<TestEntity>())).Returns(Task.CompletedTask);
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<TestEntity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TestEntity e, CancellationToken _) => e);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         await _sut.UpdateDatabaseAsync(toAdd, [], []);
 
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<TestEntity>()), Times.Once);
+        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<TestEntity>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task UpdateDatabaseAsync_SetsDateAddedAndDateUpdated_OnAddedEntities()
     {
         var entity = new TestEntity { Name = "New" };
-        _repositoryMock.Setup(r => r.AddAsync(It.IsAny<TestEntity>())).Returns(Task.CompletedTask);
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<TestEntity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TestEntity e, CancellationToken _) => e);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var before = DateTime.UtcNow;
         await _sut.UpdateDatabaseAsync([entity], [], []);
@@ -107,7 +126,9 @@ public class DatabaseServicesTests
     public async Task UpdateDatabaseAsync_CallsUpdate_ForEachUpdateEntity()
     {
         var toUpdate = new List<TestEntity> { new() { Name = "Existing" } };
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         await _sut.UpdateDatabaseAsync([], toUpdate, []);
 
@@ -118,7 +139,9 @@ public class DatabaseServicesTests
     public async Task UpdateDatabaseAsync_SetsDateUpdated_OnUpdatedEntities()
     {
         var entity = new TestEntity { Name = "Existing" };
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var before = DateTime.UtcNow;
         await _sut.UpdateDatabaseAsync([], [entity], []);
@@ -133,7 +156,9 @@ public class DatabaseServicesTests
     public async Task UpdateDatabaseAsync_SoftDeletes_WhenHardDeleteFalse()
     {
         var entity = new TestEntity { Name = "Gone" };
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var before = DateTime.UtcNow;
         await _sut.UpdateDatabaseAsync([], [], [entity], hardDelete: false);
@@ -151,7 +176,9 @@ public class DatabaseServicesTests
     public async Task UpdateDatabaseAsync_HardDeletes_WhenHardDeleteTrue()
     {
         var entity = new TestEntity { Name = "Gone" };
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         await _sut.UpdateDatabaseAsync([], [], [entity], hardDelete: true);
 
@@ -165,7 +192,9 @@ public class DatabaseServicesTests
     [Fact]
     public async Task UpdateDatabaseAsync_ReturnsSaveChangesCount()
     {
-        _repositoryMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(3);
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(3);
 
         var result = await _sut.UpdateDatabaseAsync([], [], []);
 
@@ -175,7 +204,8 @@ public class DatabaseServicesTests
     [Fact]
     public async Task UpdateDatabaseAsync_LogsAndRethrows_WhenRepositoryThrows()
     {
-        _repositoryMock.Setup(r => r.SaveChangesAsync())
+        _repositoryMock
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("constraint violation"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(

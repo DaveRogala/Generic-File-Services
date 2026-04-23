@@ -48,7 +48,7 @@ public static class FileImportServiceCollectionExtensions
         where M : DbContext
         where F : class, IFileImportServices<T, U, M>
     {
-        services.AddScoped<IGenericRepository<T, M>, Repository<T, M>>();
+        services.AddScoped<IGenericRepository<T, M, int>, Repository<T, M>>();
         services.AddScoped<IFileServices, FileServices>();
         services.AddScoped<IFileReaderServices<U>, FileReaderServices<U>>();
         services.AddScoped<IDatabaseServices<T, M>, DatabaseServices<T, M>>();

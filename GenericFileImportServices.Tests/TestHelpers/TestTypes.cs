@@ -9,6 +9,9 @@ namespace GenericFileImportServices.Tests.TestHelpers;
 
 public class TestEntity : BaseObject
 {
+    [SetsRequiredMembers]
+    public TestEntity() { Name = null!; }
+
     public required string Name { get; set; }
 }
 

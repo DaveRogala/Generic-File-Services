@@ -4,17 +4,18 @@ namespace GenericFileImportServices.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IDatabaseServices{T,C}"/>.
-/// Delegates persistence to <see cref="IGenericRepository{T,C}"/> and stamps UTC timestamps
+/// Delegates persistence to <see cref="IGenericRepository{T,C,TKey}"/> and stamps UTC timestamps
 /// on all mutations via the <see cref="BaseObject"/> audit fields.
 /// </summary>
 public class DatabaseServices<T, C> : IDatabaseServices<T, C>
     where T : BaseObject
     where C : DbContext
 {
-    private readonly IGenericRepository<T, C> _repository;
+    private readonly IGenericRepository<T, C, int> _repository;
     private readonly ILogger<DatabaseServices<T, C>> _logger;
 
-    public DatabaseServices(IGenericRepository<T, C> repository, ILogger<DatabaseServices<T, C>> logger)
+    /// <summary>Initializes a new instance with the required collaborators.</summary>
+    public DatabaseServices(IGenericRepository<T, C, int> repository, ILogger<DatabaseServices<T, C>> logger)
     {
         _logger = logger;
         _repository = repository;
