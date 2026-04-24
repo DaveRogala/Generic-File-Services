@@ -140,21 +140,24 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
 
     /// <summary>
     /// Returns the entities to insert — rows present in <paramref name="dtos"/> but absent from <paramref name="existingEntities"/>.
+    /// Override only if the import scenario requires adds; defaults to no-op.
     /// </summary>
     /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of existing keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
-    public abstract List<T> GetAddEntities(List<T> existingEntities, List<U> dtos);
+    public virtual List<T> GetAddEntities(List<T> existingEntities, List<U> dtos) => [];
 
     /// <summary>
     /// Returns the entities to update — rows present in both <paramref name="existingEntities"/> and <paramref name="dtos"/>,
     /// with field changes already applied to the returned entities.
+    /// Override only if the import scenario requires updates; defaults to no-op.
     /// </summary>
-    public abstract List<T> GetUpdateEntities(List<T> existingEntities, List<U> dtos);
+    public virtual List<T> GetUpdateEntities(List<T> existingEntities, List<U> dtos) => [];
 
     /// <summary>
     /// Returns the entities to delete — rows present in <paramref name="existingEntities"/> but absent from <paramref name="dtos"/>.
+    /// Override only if the import scenario requires deletes; defaults to no-op.
     /// </summary>
     /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of DTO keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
-    public abstract List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos);
+    public virtual List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos) => [];
 
     /// <inheritdoc/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)

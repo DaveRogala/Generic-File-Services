@@ -28,8 +28,8 @@ public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(
 /// <summary>
 /// Concrete implementation used in FileImportServices tests.
 /// Add = DTOs with no matching entity name.
-/// Update = nothing (name-only match, no field changes in test data).
 /// Delete = entities with no matching DTO name.
+/// Update is not overridden — the default no-op is intentional.
 /// </summary>
 public class TestFileImportServices(
     IDatabaseServices<TestEntity, TestDbContext> databaseServices,
@@ -41,8 +41,6 @@ public class TestFileImportServices(
         dtos.Where(d => existingEntities.All(e => e.Name != d.Name))
             .Select(d => new TestEntity { Name = d.Name })
             .ToList();
-
-    public override List<TestEntity> GetUpdateEntities(List<TestEntity> existingEntities, List<TestDto> dtos) => [];
 
     public override List<TestEntity> GetDeleteEntities(List<TestEntity> existingEntities, List<TestDto> dtos) =>
         existingEntities.Where(e => e.DateDeletedUtc is null && dtos.All(d => d.Name != e.Name))

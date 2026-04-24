@@ -1,6 +1,6 @@
 # GenericFileImportServices
 
-A .NET library that eliminates boilerplate when building file-to-database ETL pipelines. Consumers extend a single abstract base class, implement three reconciliation methods, and the library handles file discovery, parsing, database upsert/delete, archiving, and error handling.
+A .NET library that eliminates boilerplate when building file-to-database ETL pipelines. Consumers extend a single base class, override only the reconciliation methods they need, and the library handles file discovery, parsing, database upsert/delete, archiving, and error handling.
 
 Targets **net10.0**. Depends on [MagellanFileServices](https://github.com/DaveRogala/MagellanFileServices) for file I/O and [GenericRepositories](https://github.com/DaveRogala/GenericRepositories) for the EF Core repository pattern.
 
@@ -42,7 +42,9 @@ public class ProductDto
 
 ### 2. Implement the import service
 
-Extend `FileImportServices<TEntity, TDto, TContext>` and implement the three reconciliation methods:
+Extend `FileImportServices<TEntity, TDto, TContext>` and override only the reconciliation methods your scenario requires. All three default to a no-op (empty list), so unneeded operations require no code at all.
+
+**Add, update, and delete:**
 
 ```csharp
 public class ProductImportService(
@@ -74,6 +76,30 @@ public class ProductImportService(
                        .ToList();
     }
 }
+```
+
+**Add and delete only** — omit `GetUpdateEntities` entirely:
+
+```csharp
+public class ProductImportService(...)
+    : FileImportServices<Product, ProductDto, AppDbContext>(...)
+{
+    public override List<Product> GetAddEntities(List<Product> existing, List<ProductDto> dtos) =>
+        dtos.Where(d => existing.All(e => e.Sku != d.Sku))
+            .Select(d => new Product { Sku = d.Sku, Name = d.Name, Price = d.Price })
+            .ToList();
+
+    public override List<Product> GetDeleteEntities(List<Product> existing, List<ProductDto> dtos) =>
+        existing.Where(e => e.DateDeletedUtc is null && dtos.All(d => d.Sku != e.Sku))
+                .ToList();
+}
+```
+
+**Append-only** — override nothing:
+
+```csharp
+public class ProductImportService(...)
+    : FileImportServices<Product, ProductDto, AppDbContext>(...) { }
 ```
 
 ### 3. Register services
@@ -199,7 +225,7 @@ Each call to `ProcessFileAsync` follows this sequence:
 1. **Discover** files matching `fileNamePattern` in `basePath`
 2. **Parse** each file into `List<TDto>` via `MagellanFileServices`
 3. **Load** all existing `TEntity` records from the database (once, before the file loop)
-4. **Reconcile** by calling your three abstract methods:
+4. **Reconcile** by calling the three virtual methods (override only what you need; unoverridden methods return an empty list):
    - `GetAddEntities` — rows in the file not yet in the database
    - `GetUpdateEntities` — rows in both; apply field changes to the existing entities
    - `GetDeleteEntities` — rows in the database no longer in the file
