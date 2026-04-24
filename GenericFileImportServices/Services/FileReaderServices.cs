@@ -54,34 +54,35 @@ public class FileReaderServices<U> : IFileReaderServices<U>
             ArgumentException.ThrowIfNullOrWhiteSpace(basePath, nameof(basePath));
             ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern, nameof(fileNamePattern));
             DirectoryInfo di = new(basePath);
-            List<FileInfo> files = di.GetFiles(fileNamePattern).ToList();
+            FileInfo[] files = di.GetFiles(fileNamePattern);
             List<FileResults<U>> fileResults = [];
 
-            int fileCount = files.Count;
+            int fileCount = files.Length;
 
             _logger.LogInformation("Found {fileCount} files matching pattern {fileNamePattern}", fileCount, fileNamePattern);
 
             if (failIfFileMissing && fileCount == 0)
             {
-                throw new Exception("No file found");
+                throw new FileNotFoundException("No matching file found");
             }
-            if (!multipleFiles && files.Count > 1)
+            if (!multipleFiles && fileCount > 1)
             {
-                throw new Exception($"{fileCount} found matching pattern {fileNamePattern}");
+                throw new InvalidOperationException($"{fileCount} files found matching pattern {fileNamePattern}");
             }
 
             foreach (FileInfo file in files.OrderBy(f => f.LastWriteTime))
             {
                 _logger.LogInformation("Processing file {fileName}", file.Name);
 
+                var filePath = Path.Combine(basePath, file.Name);
                 ObjectResult<U> importResult = rowsToSkip > 0 || fixUnescapedQuotes
-                    ? _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
-                    : _fileServices.GetDataFromFile<U>(Path.Combine(basePath, file.Name), encoding, firstLineContainsEncoding, delimiter);
+                    ? _fileServices.GetDataFromFile<U>(filePath, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
+                    : _fileServices.GetDataFromFile<U>(filePath, encoding, firstLineContainsEncoding, delimiter);
 
                 fileResults.Add(new(importResult, file.Name));
                 if (importResult.Errors.Count > 0)
                 {
-                    _logger.LogWarning("File {fileName} import completed with errors", file.FullName);
+                    _logger.LogWarning("File {filePath} import completed with errors", filePath);
                 }
             }
             return fileResults;

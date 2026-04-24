@@ -67,13 +67,14 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
                 entity.DateAddedUtc = utcNow;
                 await _repository.AddAsync(entity);
             }
-            foreach (var entity in deleteEntities)
+            if (hardDelete)
             {
-                if (hardDelete)
-                {
+                foreach (var entity in deleteEntities)
                     _repository.Delete(entity);
-                }
-                else
+            }
+            else
+            {
+                foreach (var entity in deleteEntities)
                 {
                     entity.DateDeletedUtc = utcNow;
                     entity.DateUpdatedUtc = utcNow;

@@ -20,6 +20,9 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     private readonly IFileReaderServices<U> _fileReaderServices;
     private readonly ILogger<FileImportServices<T, U, C>> _logger;
 
+    private static readonly string TimestampFormat = "yyyyMMddHHmmssfff";
+    private static readonly string FileContainedErrors = "File contained errors";
+
     /// <summary>Initializes a new instance with the required collaborators.</summary>
     protected FileImportServices(
         IDatabaseServices<T, C> databaseServices,
@@ -46,7 +49,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             {
                 List<string> errors = fileResult.Errors;
 
-                string timeStamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+                string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
                 try
                 {
                     if (fileResult.ObjectResults is not null)
@@ -61,7 +64,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                     }
                     if (fileResult.Errors.Count > 0)
                     {
-                        await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, "File contained errors", timeStamp, fileResult.Errors);
+                        await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, FileContainedErrors, timeStamp, fileResult.Errors);
                     }
                     else if (archiveIfSuccess)
                     {
@@ -75,7 +78,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                 }
                 return errors;
             }
-            throw new Exception("Unable to read from file");
+            throw new InvalidOperationException("Stream returned no file result");
         }
         catch (Exception ex)
         {
@@ -91,15 +94,16 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(basePath, nameof(basePath));
             ArgumentException.ThrowIfNullOrWhiteSpace(fileNamePattern, nameof(fileNamePattern));
-            //TODO account for wanting entire file to fail if line errors
             var fileResults = _fileReaderServices.ReadFromFile(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: firstLineContainsEncoding, failIfFileMissing: failIfNotFound, multipleFiles, rowsToSkip: rowsToSkip, fixUnescapedQuotes: fixUnescapedQuotes);
             List<string> errors = [..fileResults.SelectMany(f => f.Errors.Select(e => $"File: {f.FileName}: Error; {e}"))];
+
+            if (fileResults.Count == 0) return errors;
 
             List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
 
             foreach (var fileResult in fileResults)
             {
-                string timeStamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+                string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
                 try
                 {
                     if (fileResult.ObjectResults is not null)
@@ -112,7 +116,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                     }
                     if (fileResult.Errors.Count > 0)
                     {
-                        _fileReaderServices.HandleFileError(basePath, fileResult.FileName, "File contained errors", timeStamp, fileResult.Errors);
+                        _fileReaderServices.HandleFileError(basePath, fileResult.FileName, FileContainedErrors, timeStamp, fileResult.Errors);
                     }
                     else if (archiveIfSuccess)
                     {
@@ -137,6 +141,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     /// <summary>
     /// Returns the entities to insert — rows present in <paramref name="dtos"/> but absent from <paramref name="existingEntities"/>.
     /// </summary>
+    /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of existing keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
     public abstract List<T> GetAddEntities(List<T> existingEntities, List<U> dtos);
 
     /// <summary>
@@ -148,6 +153,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     /// <summary>
     /// Returns the entities to delete — rows present in <paramref name="existingEntities"/> but absent from <paramref name="dtos"/>.
     /// </summary>
+    /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of DTO keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
     public abstract List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos);
 
     /// <inheritdoc/>

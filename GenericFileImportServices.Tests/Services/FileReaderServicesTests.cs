@@ -111,7 +111,7 @@ public class FileReaderServicesTests : IDisposable
     [Fact]
     public void ReadFromFile_File_ThrowsFileNotFoundException_WhenNoFilesAndFailIfMissingTrue()
     {
-        Assert.Throws<Exception>(() =>
+        Assert.Throws<FileNotFoundException>(() =>
             _sut.ReadFromFile(_tempDir, "*.csv", Encoding.UTF8, failIfFileMissing: true));
     }
 
@@ -132,7 +132,7 @@ public class FileReaderServicesTests : IDisposable
             .Setup(f => f.GetDataFromFile<TestDto>(It.IsAny<string>(), It.IsAny<Encoding>(), It.IsAny<bool>(), It.IsAny<string>()))
             .Returns(EmptyResult());
 
-        Assert.Throws<Exception>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             _sut.ReadFromFile(_tempDir, "*.csv", Encoding.UTF8, multipleFiles: false));
     }
 

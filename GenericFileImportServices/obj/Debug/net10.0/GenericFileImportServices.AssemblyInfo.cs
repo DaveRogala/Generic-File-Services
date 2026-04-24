@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GenericFileImportServices")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("2.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.0.0+82e3235ca9a115855eebf8091b885629fe16ef6e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.0.0+758943ede2468ac6d07676c48b89d2cf91b58c1e")]
 [assembly: System.Reflection.AssemblyProductAttribute("GenericFileImportServices")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GenericFileImportServices")]
 [assembly: System.Reflection.AssemblyVersionAttribute("2.0.0")]
