@@ -2,6 +2,14 @@
 
 All notable changes to GenericFileImportServices are documented here.
 
+## [2.1.0] - 2026-04-24
+
+### New features
+
+- **`GetAddEntities`, `GetUpdateEntities`, `GetDeleteEntities`** — changed from `abstract` to `virtual` with a no-op default (`=> []`). Consumers no longer need to override all three; unneeded operations can simply be omitted rather than returning an empty list explicitly. Consumers who already override all three see no change in behaviour.
+
+---
+
 ## [2.0.0] - 2026-04-23
 
 ### Breaking changes
