@@ -19,19 +19,30 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     private readonly IDatabaseServices<T, C> _databaseServices;
     private readonly IFileReaderServices<U> _fileReaderServices;
     private readonly ILogger<FileImportServices<T, U, C>> _logger;
+    private readonly IFileImportRecordServices<C>? _fileImportRecordServices;
 
     private static readonly string TimestampFormat = "yyyyMMddHHmmssfff";
     private static readonly string FileContainedErrors = "File contained errors";
 
     /// <summary>Initializes a new instance with the required collaborators.</summary>
+    /// <param name="databaseServices">Persistence service for the entity type.</param>
+    /// <param name="fileReaderServices">File parsing and archiving service.</param>
+    /// <param name="logger">Logger.</param>
+    /// <param name="fileImportRecordServices">
+    /// Optional metadata recorder. When supplied, a <see cref="FileImportRecord"/> and
+    /// <see cref="FileImportEntityLink"/> rows are written for every successful import.
+    /// Omit (or pass <c>null</c>) to skip metadata recording.
+    /// </param>
     protected FileImportServices(
         IDatabaseServices<T, C> databaseServices,
         IFileReaderServices<U> fileReaderServices,
-        ILogger<FileImportServices<T, U, C>> logger)
+        ILogger<FileImportServices<T, U, C>> logger,
+        IFileImportRecordServices<C>? fileImportRecordServices = null)
     {
         _fileReaderServices = fileReaderServices;
         _databaseServices = databaseServices;
         _logger = logger;
+        _fileImportRecordServices = fileImportRecordServices;
     }
 
     /// <inheritdoc/>
@@ -48,17 +59,22 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             if (fileResult is not null)
             {
                 List<string> errors = fileResult.Errors;
-
                 string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
+
+                List<T> addEntities = [];
+                List<T> updateEntities = [];
+
                 try
                 {
                     if (fileResult.ObjectResults is not null)
                     {
                         List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
+                        addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
+                        updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
 
                         await _databaseServices.UpdateDatabaseAsync(
-                            GetAddEntities(existingEntities, fileResult.ObjectResults),
-                            GetUpdateEntities(existingEntities, fileResult.ObjectResults),
+                            addEntities,
+                            updateEntities,
                             GetDeleteEntities(existingEntities, fileResult.ObjectResults),
                             hardDelete);
                     }
@@ -69,6 +85,13 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                     else if (archiveIfSuccess)
                     {
                         await _fileReaderServices.HandleFileSuccessAsync(stream, blobConnectionString, containerName, filePath, timeStamp);
+                        if (_fileImportRecordServices is not null)
+                        {
+                            await _fileImportRecordServices.RecordFileImportAsync(
+                                Path.GetFileName(filePath),
+                                BuildArchivedBlobPath(filePath, timeStamp),
+                                addEntities.Select(e => e.Id).Concat(updateEntities.Select(e => e.Id)));
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -104,13 +127,18 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             foreach (var fileResult in fileResults)
             {
                 string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
+                List<T> addEntities = [];
+                List<T> updateEntities = [];
                 try
                 {
                     if (fileResult.ObjectResults is not null)
                     {
+                        addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
+                        updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
+
                         await _databaseServices.UpdateDatabaseAsync(
-                            GetAddEntities(existingEntities, fileResult.ObjectResults),
-                            GetUpdateEntities(existingEntities, fileResult.ObjectResults),
+                            addEntities,
+                            updateEntities,
                             GetDeleteEntities(existingEntities, fileResult.ObjectResults),
                             hardDelete);
                     }
@@ -121,6 +149,13 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                     else if (archiveIfSuccess)
                     {
                         _fileReaderServices.HandleFileSuccess(basePath, fileResult.FileName, timeStamp);
+                        if (_fileImportRecordServices is not null)
+                        {
+                            await _fileImportRecordServices.RecordFileImportAsync(
+                                fileResult.FileName,
+                                BuildArchivedFileName(fileResult.FileName, timeStamp),
+                                addEntities.Select(e => e.Id).Concat(updateEntities.Select(e => e.Id)));
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -217,5 +252,21 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool fixUnescapedQuotes, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes);
+    }
+
+    private static string BuildArchivedFileName(string fileName, string timeStamp)
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        return $"{name}_{timeStamp}{ext}";
+    }
+
+    private static string BuildArchivedBlobPath(string blobPath, string timeStamp)
+    {
+        var dir = Path.GetDirectoryName(blobPath)?.Replace('\\', '/');
+        var name = Path.GetFileNameWithoutExtension(blobPath);
+        var ext = Path.GetExtension(blobPath);
+        var archiveName = $"{name}_{timeStamp}{ext}";
+        return string.IsNullOrEmpty(dir) ? archiveName : $"{dir}/{archiveName}";
     }
 }

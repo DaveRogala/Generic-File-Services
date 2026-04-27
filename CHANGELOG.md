@@ -2,6 +2,18 @@
 
 All notable changes to GenericFileImportServices are documented here.
 
+## [2.2.0] - 2026-04-27
+
+### New features
+
+- **File import metadata** — optional tracking of which file produced which rows. Register `AddFileImportMetadataServices<TContext>()` and call `modelBuilder.AddFileImportMetadata()` in `OnModelCreating` to enable. Two tables are created:
+  - `FileImportRecord` — one row per successfully archived file (`ImportFileName`, `ArchivedFileName`, `DateTimeAddedUtc`).
+  - `FileImportEntityLink` — one row per entity added or updated by the import; composite PK on `(FileImportRecordId, EntityId)`; `EntityId` is a logical FK to the entity table (consumers can add a hard FK if desired).
+- `IFileImportRecordServices<C>` — new optional constructor parameter on `FileImportServices<T,U,C>`. Pass `null` (the default) to preserve existing behaviour with no metadata overhead.
+- `ModelBuilderExtensions.AddFileImportMetadata(this ModelBuilder)` — convenience extension for configuring both metadata tables in one call.
+
+---
+
 ## [2.1.0] - 2026-04-24
 
 ### New features

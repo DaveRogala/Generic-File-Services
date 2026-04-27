@@ -274,6 +274,79 @@ If your key field is a string, pass `StringComparer.OrdinalIgnoreCase` to `ToHas
 
 ---
 
+## File import metadata
+
+Optionally track which file produced which rows by enabling import metadata recording. Two tables are created in your database: `FileImportRecord` (one row per file) and `FileImportEntityLink` (one row per entity touched by the import).
+
+### 1. Configure the DbContext
+
+```csharp
+using GenericFileImportServices.Extensions;
+
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.AddFileImportMetadata();
+    }
+}
+```
+
+### 2. Register the metadata service
+
+Call `AddFileImportMetadataServices` **after** `AddFileImportServices`:
+
+```csharp
+builder.Services.AddFileImportServices<Product, ProductDto, AppDbContext, ProductImportService>(
+    options => options.UseSqlServer(connectionString));
+
+builder.Services.AddFileImportMetadataServices<AppDbContext>();
+```
+
+### 3. Inject into the import service
+
+Add `IFileImportRecordServices<AppDbContext>` as an optional constructor parameter and pass it through to the base class:
+
+```csharp
+public class ProductImportService(
+    IDatabaseServices<Product, AppDbContext> db,
+    IFileReaderServices<ProductDto> reader,
+    ILogger<ProductImportService> logger,
+    IFileImportRecordServices<AppDbContext>? metadataServices = null)
+    : FileImportServices<Product, ProductDto, AppDbContext>(db, reader, logger, metadataServices)
+{
+    // reconciliation overrides as before
+}
+```
+
+After each successful import, `ProcessFileAsync` writes one `FileImportRecord` and one `FileImportEntityLink` per entity that was added or updated. No metadata is written when `archiveIfSuccess` is `false` or when the file contains parse errors.
+
+### Metadata schema
+
+| Table | Column | Notes |
+|---|---|---|
+| `FileImportRecord` | `Id` | Surrogate PK |
+| | `ImportFileName` | Original file name (e.g. `orders_20260101.csv`) |
+| | `ArchivedFileName` | Archive name after move (e.g. `orders_20260101_20260101120000000.csv`) |
+| | `DateTimeAddedUtc` | UTC timestamp of the import |
+| `FileImportEntityLink` | `FileImportRecordId` | FK → `FileImportRecord.Id` (cascade delete) |
+| | `EntityId` | Logical FK to the entity's `Id`; no EF navigation (entity type is generic) |
+
+`FileImportEntityLink` uses a composite PK on `(FileImportRecordId, EntityId)`. `EntityId` is indexed for reverse lookups. Consumers who want a database-enforced FK from `EntityId` to their entity table can add it in `OnModelCreating`:
+
+```csharp
+modelBuilder.Entity<FileImportEntityLink>()
+    .HasOne<Product>()
+    .WithMany()
+    .HasForeignKey(l => l.EntityId)
+    .OnDelete(DeleteBehavior.Cascade);
+```
+
+---
+
 ## BaseObject
 
 All entities must inherit `BaseObject`, which provides soft-delete timestamps and a surrogate key:

@@ -1,6 +1,7 @@
 using GenericFileImportServices.Repositories;
 using GenericFileImportServices.Services;
 using MagellanFileServices.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GenericFileImportServices;
@@ -54,6 +55,24 @@ public static class FileImportServiceCollectionExtensions
         services.AddScoped<IDatabaseServices<T, M>, DatabaseServices<T, M>>();
         services.AddScoped<IFileImportServices<T, U, M>, F>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="IFileImportRecordServices{C}"/> so that
+    /// <see cref="FileImportServices{T,U,C}"/> records a <see cref="FileImportRecord"/>
+    /// and per-entity <see cref="FileImportEntityLink"/> rows after each successful import.
+    /// </summary>
+    /// <remarks>
+    /// Also call <c>modelBuilder.AddFileImportMetadata()</c> in your
+    /// <c>DbContext.OnModelCreating</c> to create the required tables.
+    /// </remarks>
+    /// <typeparam name="M">EF Core <see cref="DbContext"/> type.</typeparam>
+    /// <param name="services">The service collection to configure.</param>
+    public static IServiceCollection AddFileImportMetadataServices<M>(this IServiceCollection services)
+        where M : DbContext
+    {
+        services.AddScoped<IFileImportRecordServices<M>, FileImportRecordServices<M>>();
         return services;
     }
 }

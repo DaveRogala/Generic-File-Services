@@ -1,4 +1,5 @@
 using GenericFileImportServices.Contracts;
+using GenericFileImportServices.Extensions;
 using GenericFileImportServices.Models;
 using GenericFileImportServices.Models.Database.Base;
 using GenericFileImportServices.Services;
@@ -25,6 +26,13 @@ public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(
     public DbSet<TestEntity> TestEntities => Set<TestEntity>();
 }
 
+/// <summary>Minimal DbContext used in FileImportRecordServices tests.</summary>
+public class MetadataTestDbContext(DbContextOptions<MetadataTestDbContext> options) : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.AddFileImportMetadata();
+}
+
 /// <summary>
 /// Concrete implementation used in FileImportServices tests.
 /// Add = DTOs with no matching entity name.
@@ -34,8 +42,9 @@ public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(
 public class TestFileImportServices(
     IDatabaseServices<TestEntity, TestDbContext> databaseServices,
     IFileReaderServices<TestDto> fileReaderServices,
-    ILogger<TestFileImportServices> logger)
-    : FileImportServices<TestEntity, TestDto, TestDbContext>(databaseServices, fileReaderServices, logger)
+    ILogger<TestFileImportServices> logger,
+    IFileImportRecordServices<TestDbContext>? fileImportRecordServices = null)
+    : FileImportServices<TestEntity, TestDto, TestDbContext>(databaseServices, fileReaderServices, logger, fileImportRecordServices)
 {
     public override List<TestEntity> GetAddEntities(List<TestEntity> existingEntities, List<TestDto> dtos) =>
         dtos.Where(d => existingEntities.All(e => e.Name != d.Name))

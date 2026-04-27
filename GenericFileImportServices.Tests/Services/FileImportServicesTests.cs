@@ -289,4 +289,48 @@ public class FileImportServicesTests
             r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>()),
             Times.Once);
     }
+
+    // ── File import metadata recording ───────────────────────────────────────
+
+    [Fact]
+    public async Task ProcessFileAsync_RecordsMetadata_WhenSuccessAndMetadataServiceRegistered()
+    {
+        var metaMock = new Mock<IFileImportRecordServices<TestDbContext>>();
+        var sut = new TestFileImportServices(_dbMock.Object, _readerMock.Object, _loggerMock.Object, metaMock.Object);
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "X" }]));
+
+        await sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false, archiveIfSuccess: true);
+
+        metaMock.Verify(m => m.RecordFileImportAsync(
+            "data.csv", It.IsAny<string>(), It.IsAny<IEnumerable<int>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_DoesNotRecordMetadata_WhenFileHasParseErrors()
+    {
+        var metaMock = new Mock<IFileImportRecordServices<TestDbContext>>();
+        var sut = new TestFileImportServices(_dbMock.Object, _readerMock.Object, _loggerMock.Object, metaMock.Object);
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", [], ["parse error"]));
+
+        await sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
+
+        metaMock.Verify(m => m.RecordFileImportAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<int>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_DoesNotRecordMetadata_WhenArchiveIfSuccessFalse()
+    {
+        var metaMock = new Mock<IFileImportRecordServices<TestDbContext>>();
+        var sut = new TestFileImportServices(_dbMock.Object, _readerMock.Object, _loggerMock.Object, metaMock.Object);
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "X" }]));
+
+        await sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false, archiveIfSuccess: false);
+
+        metaMock.Verify(m => m.RecordFileImportAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<int>>()), Times.Never);
+    }
 }
