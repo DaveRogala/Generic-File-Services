@@ -68,7 +68,8 @@ public class FileWriterServicesTests : IDisposable
     [Fact]
     public void WriteToFile_CreatesEmptyFile_WhenNoHeadersAndNoRows()
     {
-        _sut.WriteToFile(_tempDir, "empty.csv", [], [], Encoding.UTF8);
+        // Use no-BOM encoding: Encoding.UTF8 writes a 3-byte preamble on flush even with no content
+        _sut.WriteToFile(_tempDir, "empty.csv", [], [], new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         Assert.Equal(0, new FileInfo(Path.Combine(_tempDir, "empty.csv")).Length);
     }
