@@ -10,8 +10,8 @@ namespace GenericFileServices.Tests.Services;
 public class FileExportServicesTests
 {
     private readonly Mock<IFileWriterServices> _writerMock = new();
-    private readonly Mock<ILogger<FileExportServices<TestEntity, TestDbContext>>> _loggerMock = new();
-    private readonly IFileExportServices<TestEntity, TestDbContext> _sut;
+    private readonly Mock<ILogger<FileExportServices<ExportTestDto, TestDbContext>>> _loggerMock = new();
+    private readonly IFileExportServices<ExportTestDto, TestDbContext> _sut;
 
     private const string BasePath = "/exports";
     private const string FileName = "out.csv";
@@ -21,38 +21,20 @@ public class FileExportServicesTests
 
     public FileExportServicesTests()
     {
-        _sut = new FileExportServices<TestEntity, TestDbContext>(_writerMock.Object, _loggerMock.Object);
+        _sut = new FileExportServices<ExportTestDto, TestDbContext>(_writerMock.Object, _loggerMock.Object);
 
-        // Default blob setup — WriteToBlobAsync returns Task.CompletedTask unless overridden
         _writerMock
             .Setup(w => w.WriteToBlobAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static Func<Task<List<TestEntity>>> DataProvider(params string[] names) =>
-        () => Task.FromResult(names.Select(n => new TestEntity { Name = n }).ToList());
-
-    private static Func<TestEntity, IEnumerable<string>> NameMapper =>
-        e => [e.Name];
-
-    // Captures the rows passed to WriteToFile by materialising the lazy sequence
-    private void CaptureWriteToFileRows(out Func<List<List<string>>> getRows)
-    {
-        List<List<string>>? captured = null;
-        _writerMock
-            .Setup(w => w.WriteToFile(
-                It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
-                It.IsAny<Encoding>(), It.IsAny<string>()))
-            .Callback<string, string, IEnumerable<string>, IEnumerable<IEnumerable<string>>, Encoding, string>(
-                (_, _, _, rows, _, _) => captured = rows.Select(r => r.ToList()).ToList());
-        getRows = () => captured!;
-    }
+    private static Func<Task<List<ExportTestDto>>> DataProvider(params string[] names) =>
+        () => Task.FromResult(names.Select(n => new ExportTestDto(n, 0)).ToList());
 
     // ── ExportToFileAsync — argument validation ───────────────────────────────
 
@@ -60,14 +42,14 @@ public class FileExportServicesTests
     public async Task ExportToFileAsync_ThrowsArgumentException_WhenBasePathEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ExportToFileAsync("", FileName, DataProvider(), NameMapper, [], Encoding.UTF8));
+            _sut.ExportToFileAsync("", FileName, DataProvider(), Encoding.UTF8));
     }
 
     [Fact]
     public async Task ExportToFileAsync_ThrowsArgumentException_WhenFileNameEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ExportToFileAsync(BasePath, "", DataProvider(), NameMapper, [], Encoding.UTF8));
+            _sut.ExportToFileAsync(BasePath, "", DataProvider(), Encoding.UTF8));
     }
 
     // ── ExportToFileAsync — happy path ───────────────────────────────────────
@@ -76,7 +58,7 @@ public class FileExportServicesTests
     public async Task ExportToFileAsync_ReturnsEmptyErrors_OnSuccess()
     {
         var errors = await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("Alice"), NameMapper, ["Name"], Encoding.UTF8);
+            BasePath, FileName, DataProvider("Alice"), Encoding.UTF8);
 
         Assert.Empty(errors);
     }
@@ -84,57 +66,43 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToFileAsync_CallsWriteToFile_WithCorrectPathAndFile()
     {
-        await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("Alice"), NameMapper, ["Name"], Encoding.UTF8);
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("Alice"), Encoding.UTF8);
 
         _writerMock.Verify(w => w.WriteToFile(
             BasePath, FileName,
-            It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
             Encoding.UTF8, ","),
             Times.Once);
     }
 
     [Fact]
-    public async Task ExportToFileAsync_PassesMappedRows_ToWriter()
+    public async Task ExportToFileAsync_PassesRecords_ToWriter()
     {
-        CaptureWriteToFileRows(out var getRows);
-
-        await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("Alice", "Bob"), NameMapper, ["Name"], Encoding.UTF8);
-
-        var rows = getRows();
-        Assert.Equal(2, rows.Count);
-        Assert.Equal(["Alice"], rows[0]);
-        Assert.Equal(["Bob"], rows[1]);
-    }
-
-    [Fact]
-    public async Task ExportToFileAsync_PassesHeaders_ToWriter()
-    {
-        string[]? capturedHeaders = null;
+        List<ExportTestDto>? captured = null;
         _writerMock
             .Setup(w => w.WriteToFile(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
-            .Callback<string, string, IEnumerable<string>, IEnumerable<IEnumerable<string>>, Encoding, string>(
-                (_, _, headers, _, _, _) => capturedHeaders = headers.ToArray());
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string>(
+                (_, _, records, _, _) => captured = records.ToList());
 
-        await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8);
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("Alice", "Bob"), Encoding.UTF8);
 
-        Assert.Equal(["Name"], capturedHeaders);
+        Assert.NotNull(captured);
+        Assert.Equal(2, captured.Count);
+        Assert.Equal("Alice", captured[0].Name);
+        Assert.Equal("Bob", captured[1].Name);
     }
 
     [Fact]
     public async Task ExportToFileAsync_ForwardsCustomDelimiter_ToWriter()
     {
-        await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8, delimiter: "\t");
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("X"), Encoding.UTF8, delimiter: "\t");
 
         _writerMock.Verify(w => w.WriteToFile(
             It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), "\t"),
             Times.Once);
     }
@@ -142,13 +110,20 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToFileAsync_WorksWithEmptyDataSet()
     {
-        CaptureWriteToFileRows(out var getRows);
+        List<ExportTestDto>? captured = null;
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string>(
+                (_, _, records, _, _) => captured = records.ToList());
 
-        var errors = await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider(), NameMapper, ["Name"], Encoding.UTF8);
+        var errors = await _sut.ExportToFileAsync(BasePath, FileName, DataProvider(), Encoding.UTF8);
 
         Assert.Empty(errors);
-        Assert.Empty(getRows());
+        Assert.NotNull(captured);
+        Assert.Empty(captured);
     }
 
     // ── ExportToFileAsync — error handling ───────────────────────────────────
@@ -156,11 +131,10 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToFileAsync_ReturnsErrors_WhenDataProviderThrows()
     {
-        Func<Task<List<TestEntity>>> failingProvider =
+        Func<Task<List<ExportTestDto>>> failingProvider =
             () => throw new InvalidOperationException("db unavailable");
 
-        var errors = await _sut.ExportToFileAsync(
-            BasePath, FileName, failingProvider, NameMapper, ["Name"], Encoding.UTF8);
+        var errors = await _sut.ExportToFileAsync(BasePath, FileName, failingProvider, Encoding.UTF8);
 
         Assert.Single(errors);
         Assert.Contains("db unavailable", errors[0]);
@@ -172,12 +146,12 @@ public class FileExportServicesTests
         _writerMock
             .Setup(w => w.WriteToFile(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
             .Throws(new IOException("disk full"));
 
         var errors = await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8);
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8);
 
         Assert.Single(errors);
         Assert.Contains("disk full", errors[0]);
@@ -186,14 +160,14 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToFileAsync_DoesNotCallWriter_WhenDataProviderThrows()
     {
-        Func<Task<List<TestEntity>>> failingProvider =
+        Func<Task<List<ExportTestDto>>> failingProvider =
             () => throw new InvalidOperationException("db unavailable");
 
-        await _sut.ExportToFileAsync(BasePath, FileName, failingProvider, NameMapper, ["Name"], Encoding.UTF8);
+        await _sut.ExportToFileAsync(BasePath, FileName, failingProvider, Encoding.UTF8);
 
         _writerMock.Verify(w => w.WriteToFile(
             It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>()),
             Times.Never);
     }
@@ -203,8 +177,7 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToFileAsync_DoesNotCallArchive_WhenFlagFalse()
     {
-        await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8);
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("X"), Encoding.UTF8);
 
         _writerMock.Verify(w => w.ArchiveExistingFile(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()),
@@ -215,7 +188,7 @@ public class FileExportServicesTests
     public async Task ExportToFileAsync_CallsArchive_WhenFlagTrue()
     {
         await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8,
             archiveExistingFile: true);
 
         _writerMock.Verify(w => w.ArchiveExistingFile(BasePath, FileName, null), Times.Once);
@@ -225,7 +198,7 @@ public class FileExportServicesTests
     public async Task ExportToFileAsync_ForwardsArchivePath_ToWriter()
     {
         await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8,
             archiveExistingFile: true, archivePath: "/custom/archive");
 
         _writerMock.Verify(w => w.ArchiveExistingFile(BasePath, FileName, "/custom/archive"), Times.Once);
@@ -241,13 +214,13 @@ public class FileExportServicesTests
         _writerMock
             .Setup(w => w.WriteToFile(
                 It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
-            .Callback<string, string, IEnumerable<string>, IEnumerable<IEnumerable<string>>, Encoding, string>(
-                (_, _, _, _, _, _) => callOrder.Add("write"));
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string>(
+                (_, _, _, _, _) => callOrder.Add("write"));
 
         await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8,
             archiveExistingFile: true);
 
         Assert.Equal(["archive", "write"], callOrder);
@@ -261,7 +234,7 @@ public class FileExportServicesTests
             .Throws(new IOException("access denied"));
 
         var errors = await _sut.ExportToFileAsync(
-            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8,
             archiveExistingFile: true);
 
         Assert.Single(errors);
@@ -274,21 +247,21 @@ public class FileExportServicesTests
     public async Task ExportToBlobAsync_ThrowsArgumentException_WhenConnectionStringEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ExportToBlobAsync("", Container, BlobPath, DataProvider(), NameMapper, [], Encoding.UTF8));
+            _sut.ExportToBlobAsync("", Container, BlobPath, DataProvider(), Encoding.UTF8));
     }
 
     [Fact]
     public async Task ExportToBlobAsync_ThrowsArgumentException_WhenContainerNameEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ExportToBlobAsync(ConnStr, "", BlobPath, DataProvider(), NameMapper, [], Encoding.UTF8));
+            _sut.ExportToBlobAsync(ConnStr, "", BlobPath, DataProvider(), Encoding.UTF8));
     }
 
     [Fact]
     public async Task ExportToBlobAsync_ThrowsArgumentException_WhenBlobPathEmpty()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.ExportToBlobAsync(ConnStr, Container, "", DataProvider(), NameMapper, [], Encoding.UTF8));
+            _sut.ExportToBlobAsync(ConnStr, Container, "", DataProvider(), Encoding.UTF8));
     }
 
     // ── ExportToBlobAsync — happy path ────────────────────────────────────────
@@ -297,7 +270,7 @@ public class FileExportServicesTests
     public async Task ExportToBlobAsync_ReturnsEmptyErrors_OnSuccess()
     {
         var errors = await _sut.ExportToBlobAsync(
-            ConnStr, Container, BlobPath, DataProvider("Alice"), NameMapper, ["Name"], Encoding.UTF8);
+            ConnStr, Container, BlobPath, DataProvider("Alice"), Encoding.UTF8);
 
         Assert.Empty(errors);
     }
@@ -306,35 +279,35 @@ public class FileExportServicesTests
     public async Task ExportToBlobAsync_CallsWriteToBlobAsync_WithCorrectCoordinates()
     {
         await _sut.ExportToBlobAsync(
-            ConnStr, Container, BlobPath, DataProvider("Alice"), NameMapper, ["Name"], Encoding.UTF8);
+            ConnStr, Container, BlobPath, DataProvider("Alice"), Encoding.UTF8);
 
         _writerMock.Verify(w => w.WriteToBlobAsync(
             ConnStr, Container, BlobPath,
-            It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
             Encoding.UTF8, ","),
             Times.Once);
     }
 
     [Fact]
-    public async Task ExportToBlobAsync_PassesMappedRows_ToWriter()
+    public async Task ExportToBlobAsync_PassesRecords_ToWriter()
     {
-        List<List<string>>? captured = null;
+        List<ExportTestDto>? captured = null;
         _writerMock
             .Setup(w => w.WriteToBlobAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
-            .Callback<string, string, string, IEnumerable<string>, IEnumerable<IEnumerable<string>>, Encoding, string>(
-                (_, _, _, _, rows, _, _) => captured = rows.Select(r => r.ToList()).ToList())
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string>(
+                (_, _, _, records, _, _) => captured = records.ToList())
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
-            ConnStr, Container, BlobPath, DataProvider("Alice", "Bob"), NameMapper, ["Name"], Encoding.UTF8);
+            ConnStr, Container, BlobPath, DataProvider("Alice", "Bob"), Encoding.UTF8);
 
         Assert.NotNull(captured);
         Assert.Equal(2, captured.Count);
-        Assert.Equal(["Alice"], captured[0]);
-        Assert.Equal(["Bob"], captured[1]);
+        Assert.Equal("Alice", captured[0].Name);
+        Assert.Equal("Bob", captured[1].Name);
     }
 
     // ── ExportToBlobAsync — error handling ────────────────────────────────────
@@ -342,11 +315,11 @@ public class FileExportServicesTests
     [Fact]
     public async Task ExportToBlobAsync_ReturnsErrors_WhenDataProviderThrows()
     {
-        Func<Task<List<TestEntity>>> failingProvider =
+        Func<Task<List<ExportTestDto>>> failingProvider =
             () => throw new InvalidOperationException("db unavailable");
 
         var errors = await _sut.ExportToBlobAsync(
-            ConnStr, Container, BlobPath, failingProvider, NameMapper, ["Name"], Encoding.UTF8);
+            ConnStr, Container, BlobPath, failingProvider, Encoding.UTF8);
 
         Assert.Single(errors);
         Assert.Contains("db unavailable", errors[0]);
@@ -358,12 +331,12 @@ public class FileExportServicesTests
         _writerMock
             .Setup(w => w.WriteToBlobAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
             .ThrowsAsync(new IOException("upload failed"));
 
         var errors = await _sut.ExportToBlobAsync(
-            ConnStr, Container, BlobPath, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8);
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8);
 
         Assert.Single(errors);
         Assert.Contains("upload failed", errors[0]);

@@ -2,12 +2,12 @@ namespace GenericFileServices.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IFileExportServices{T,C}"/>.
-/// Fetches data via a consumer-supplied delegate, maps it to file rows,
-/// and delegates writing to <see cref="IFileWriterServices"/>.
+/// Fetches data via a consumer-supplied delegate and delegates serialisation
+/// and writing to <see cref="IFileWriterServices"/>.
 /// Argument validation errors propagate as <see cref="ArgumentException"/>;
 /// data-provider and writer errors are caught and returned in the errors list.
 /// </summary>
-/// <typeparam name="T">The type returned by the data provider.</typeparam>
+/// <typeparam name="T">DTO or record type returned by the data provider.</typeparam>
 /// <typeparam name="C">EF Core <see cref="DbContext"/> type used by the consuming application.</typeparam>
 public class FileExportServices<T, C>(
     IFileWriterServices fileWriterServices,
@@ -23,8 +23,6 @@ public class FileExportServices<T, C>(
         string basePath,
         string fileName,
         Func<Task<List<T>>> dataProvider,
-        Func<T, IEnumerable<string>> rowMapper,
-        IEnumerable<string> headers,
         Encoding encoding,
         string delimiter = ",",
         bool archiveExistingFile = false,
@@ -40,8 +38,7 @@ public class FileExportServices<T, C>(
                 _fileWriterServices.ArchiveExistingFile(basePath, fileName, archivePath);
 
             var data = await dataProvider();
-            var rows = data.Select(rowMapper);
-            _fileWriterServices.WriteToFile(basePath, fileName, headers, rows, encoding, delimiter);
+            _fileWriterServices.WriteToFile(basePath, fileName, data, encoding, delimiter);
         }
         catch (Exception ex)
         {
@@ -57,8 +54,6 @@ public class FileExportServices<T, C>(
         string containerName,
         string blobPath,
         Func<Task<List<T>>> dataProvider,
-        Func<T, IEnumerable<string>> rowMapper,
-        IEnumerable<string> headers,
         Encoding encoding,
         string delimiter = ",")
     {
@@ -70,8 +65,7 @@ public class FileExportServices<T, C>(
         try
         {
             var data = await dataProvider();
-            var rows = data.Select(rowMapper);
-            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, headers, rows, encoding, delimiter);
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter);
         }
         catch (Exception ex)
         {

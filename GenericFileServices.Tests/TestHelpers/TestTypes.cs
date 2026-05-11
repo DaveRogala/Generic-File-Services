@@ -20,6 +20,8 @@ public class TestDto
     public string Name { get; set; } = "";
 }
 
+public record ExportTestDto(string Name, int Value);
+
 public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options)
 {
     public DbSet<TestEntity> TestEntities => Set<TestEntity>();

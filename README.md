@@ -276,26 +276,36 @@ If your key field is a string, pass `StringComparer.OrdinalIgnoreCase` to `ToHas
 
 ## Export quick start
 
-### 1. Register services
+### 1. Define an export DTO
+
+Define a record (or class) that represents a single output row. CsvHelper derives column headers and field formatting from the type's properties. Use `[Name]` to customise a column header, `[Index]` to fix column order, or a `ClassMap<T>` for more control.
+
+```csharp
+using CsvHelper.Configuration.Attributes;
+
+public record ProductExportDto(
+    [property: Name("SKU")]          string Sku,
+    [property: Name("Product Name")] string Name,
+    [property: Name("Price")]        decimal Price);
+```
+
+### 2. Register services
 
 ```csharp
 builder.Services.AddScoped<IFileWriterServices, FileWriterServices>();
-builder.Services.AddScoped<IFileExportServices<Product, AppDbContext>,
-                           FileExportServices<Product, AppDbContext>>();
+builder.Services.AddScoped<IFileExportServices<ProductExportDto, AppDbContext>,
+                           FileExportServices<ProductExportDto, AppDbContext>>();
 ```
 
-### 2. Call it
+### 3. Call it
 
-The consuming application provides:
-- A **data provider** delegate that fetches the data — any EF Core query form is supported.
-- A **row mapper** that converts each record to an ordered sequence of string fields.
-- The **headers**, **encoding** (default: UTF-8 without BOM), and **destination**.
+Provide an async **data provider** delegate that returns `List<T>`. Any EF Core query form is supported — the library does not constrain the query shape.
 
 **Table or view:**
 
 ```csharp
 public class ProductExportJob(
-    IFileExportServices<Product, AppDbContext> exporter,
+    IFileExportServices<ProductExportDto, AppDbContext> exporter,
     AppDbContext db)
 {
     public async Task RunAsync()
@@ -305,9 +315,8 @@ public class ProductExportJob(
             fileName: $"products_{DateTime.UtcNow:yyyyMMdd}.csv",
             dataProvider: () => db.Products
                                   .Where(p => p.DateDeletedUtc == null)
+                                  .Select(p => new ProductExportDto(p.Sku, p.Name, p.Price))
                                   .ToListAsync(),
-            rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
-            headers: ["SKU", "Name", "Price"],
             encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         if (errors.Count > 0)
@@ -316,36 +325,6 @@ public class ProductExportJob(
 }
 ```
 
-**Archive an existing file before overwriting:**
-
-When `archiveExistingFile: true`, if the target file already exists it is timestamped and moved to the archive directory before the new file is written. The archive directory is created automatically if it does not exist.
-
-```csharp
-// Archive to the default 'archive' sub-folder of basePath
-List<string> errors = await exporter.ExportToFileAsync(
-    basePath: @"C:\exports",
-    fileName: "products.csv",
-    dataProvider: ...,
-    rowMapper: ...,
-    headers: ["SKU", "Name", "Price"],
-    encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-    archiveExistingFile: true);
-
-// Archive to an absolute path
-List<string> errors = await exporter.ExportToFileAsync(
-    ...,
-    archiveExistingFile: true,
-    archivePath: @"D:\archive\exports");
-
-// Archive to a path relative to basePath
-List<string> errors = await exporter.ExportToFileAsync(
-    ...,
-    archiveExistingFile: true,
-    archivePath: "old");
-```
-
-The archived file is named `<stem>_<yyyyMMddHHmmssfff><ext>` — for example, `products_20260511143022123.csv`.
-
 **Stored procedure:**
 
 ```csharp
@@ -353,10 +332,8 @@ List<string> errors = await exporter.ExportToFileAsync(
     basePath: @"C:\exports",
     fileName: "report.csv",
     dataProvider: () => db.Database
-                          .SqlQuery<Product>($"EXEC dbo.GetActiveProducts")
+                          .SqlQuery<ProductExportDto>($"EXEC dbo.GetActiveProducts")
                           .ToListAsync(),
-    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
-    headers: ["SKU", "Name", "Price"],
     encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 ```
 
@@ -367,12 +344,30 @@ List<string> errors = await exporter.ExportToFileAsync(
     basePath: @"C:\exports",
     fileName: "report.csv",
     dataProvider: () => db.Database
-                          .SqlQuery<Product>($"SELECT * FROM dbo.GetProductsByCategory({categoryId})")
+                          .SqlQuery<ProductExportDto>(
+                              $"SELECT * FROM dbo.GetProductsByCategory({categoryId})")
                           .ToListAsync(),
-    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
-    headers: ["SKU", "Name", "Price"],
     encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 ```
+
+**Archive an existing file before overwriting:**
+
+When `archiveExistingFile: true`, if the target file already exists it is timestamped and moved to the archive directory before the new file is written. The archive directory is created automatically.
+
+```csharp
+// Default: archive sub-folder of basePath
+await exporter.ExportToFileAsync(..., archiveExistingFile: true);
+
+// Absolute archive path
+await exporter.ExportToFileAsync(..., archiveExistingFile: true,
+    archivePath: @"D:\archive\exports");
+
+// Relative archive path (resolved relative to basePath)
+await exporter.ExportToFileAsync(..., archiveExistingFile: true,
+    archivePath: "old");
+```
+
+The archived file is named `<stem>_<yyyyMMddHHmmssfff><ext>` — for example, `products_20260511143022123.csv`.
 
 **Azure Blob Storage:**
 
@@ -381,9 +376,9 @@ List<string> errors = await exporter.ExportToBlobAsync(
     blobConnectionString: connectionString,
     containerName: "exports",
     blobPath: $"products/products_{DateTime.UtcNow:yyyyMMdd}.csv",
-    dataProvider: () => db.Products.ToListAsync(),
-    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
-    headers: ["SKU", "Name", "Price"],
+    dataProvider: () => db.Products
+                          .Select(p => new ProductExportDto(p.Sku, p.Name, p.Price))
+                          .ToListAsync(),
     encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 ```
 
@@ -429,17 +424,22 @@ Task<List<string>> ExportToBlobAsync(
 | `blobConnectionString` | — | Azure Storage connection string |
 | `containerName` | — | Target blob container name |
 | `blobPath` | — | Full blob path, e.g. `"exports/products_20260101.csv"`. Overwrites if exists. |
-| `dataProvider` | — | Async delegate that returns the data set |
-| `rowMapper` | — | Maps one record to an ordered sequence of string field values |
-| `headers` | — | Column header names written as the first row. Empty sequence omits the header. |
+| `dataProvider` | — | Async delegate that returns `List<T>` |
 | `encoding` | — | Character encoding. UTF-8 without BOM recommended. |
 | `delimiter` | `","` | Column delimiter |
 | `archiveExistingFile` | `false` | Move an existing file at the target path to the archive directory before writing |
 | `archivePath` | `null` | Archive directory. Absolute paths used as-is; relative paths resolved relative to `basePath`. `null` defaults to `archive` sub-folder of `basePath`. |
 
-### Field quoting
+### Column mapping
 
-`FileWriterServices` applies RFC 4180 quoting automatically. A field is wrapped in double-quotes when it contains the delimiter, a double-quote character, or a line terminator. Double-quote characters within a quoted field are escaped by doubling: `"`.
+CsvHelper derives column headers and field values directly from `T`. Use attributes from `CsvHelper.Configuration.Attributes` on your record properties, or register a `ClassMap<T>` with the CsvHelper configuration for more complex mappings.
+
+| Attribute | Purpose |
+|---|---|
+| `[Name("Column Header")]` | Override the column header |
+| `[Index(0)]` | Fix the column position |
+| `[Ignore]` | Exclude a property from the output |
+| `[Format("F2")]` | Apply a format string to the value |
 
 ---
 
