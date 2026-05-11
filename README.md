@@ -1,6 +1,9 @@
-# GenericFileImportServices
+# GenericFileServices
 
-A .NET library that eliminates boilerplate when building file-to-database ETL pipelines. Consumers extend a single base class, override only the reconciliation methods they need, and the library handles file discovery, parsing, database upsert/delete, archiving, and error handling.
+A .NET library that eliminates boilerplate when building file-based ETL pipelines. It covers both directions:
+
+- **Import** — discover files, parse rows, reconcile with the database, archive or report errors.
+- **Export** — fetch data from any EF Core source (table, view, stored procedure, table-valued function), format as a delimited file, and write to a local path or Azure Blob Storage.
 
 Targets **net10.0**. Depends on [MagellanFileServices](https://github.com/DaveRogala/MagellanFileServices) for file I/O and [GenericRepositories](https://github.com/DaveRogala/GenericRepositories) for the EF Core repository pattern.
 
@@ -9,12 +12,12 @@ Targets **net10.0**. Depends on [MagellanFileServices](https://github.com/DaveRo
 ## Installation
 
 ```bash
-dotnet add package GenericFileImportServices
+dotnet add package GenericFileServices
 ```
 
 ---
 
-## Quick start
+## Import quick start
 
 ### 1. Define your models
 
@@ -152,14 +155,14 @@ Task<List<string>> ProcessFileAsync(
     string basePath,
     string fileNamePattern,
     Encoding encoding,
-    string delimiter              = ",",
+    string delimiter               = ",",
     bool firstLineContainsEncoding = false,
-    bool failIfNotFound           = true,
-    bool multipleFiles            = false,
-    bool archiveIfSuccess         = true,
-    bool hardDelete               = false,
-    int  rowsToSkip               = 0,
-    bool fixUnescapedQuotes       = false)
+    bool failIfNotFound            = true,
+    bool multipleFiles             = false,
+    bool archiveIfSuccess          = true,
+    bool hardDelete                = false,
+    int  rowsToSkip                = 0,
+    bool fixUnescapedQuotes        = false)
 ```
 
 ### Master overload (Azure Blob Storage)
@@ -171,14 +174,14 @@ Task<List<string>> ProcessFileAsync(
     string containerName,
     string filePath,
     Encoding encoding,
-    string delimiter              = ",",
+    string delimiter               = ",",
     bool firstLineContainsEncoding = false,
-    bool failIfNotFound           = true,
-    bool multipleFiles            = false,
-    bool archiveIfSuccess         = true,
-    bool hardDelete               = false,
-    int  rowsToSkip               = 0,
-    bool fixUnescapedQuotes       = false)
+    bool failIfNotFound            = true,
+    bool multipleFiles             = false,
+    bool archiveIfSuccess          = true,
+    bool hardDelete                = false,
+    int  rowsToSkip                = 0,
+    bool fixUnescapedQuotes        = false)
 ```
 
 ### Parameter reference
@@ -208,9 +211,6 @@ ProcessFileAsync(basePath, fileNamePattern, rowsToSkip: 3)
 
 // Skip rows and fix unescaped quotes
 ProcessFileAsync(basePath, fileNamePattern, rowsToSkip: 1, fixUnescapedQuotes: true)
-
-// Fix unescaped quotes only (named param on master overload)
-ProcessFileAsync(basePath, fileNamePattern, fixUnescapedQuotes: true)
 
 // Hard delete
 ProcessFileAsync(basePath, fileNamePattern, hardDelete: true)
@@ -274,9 +274,146 @@ If your key field is a string, pass `StringComparer.OrdinalIgnoreCase` to `ToHas
 
 ---
 
+## Export quick start
+
+### 1. Register services
+
+```csharp
+builder.Services.AddScoped<IFileWriterServices, FileWriterServices>();
+builder.Services.AddScoped<IFileExportServices<Product, AppDbContext>,
+                           FileExportServices<Product, AppDbContext>>();
+```
+
+### 2. Call it
+
+The consuming application provides:
+- A **data provider** delegate that fetches the data — any EF Core query form is supported.
+- A **row mapper** that converts each record to an ordered sequence of string fields.
+- The **headers**, **encoding** (default: UTF-8 without BOM), and **destination**.
+
+**Table or view:**
+
+```csharp
+public class ProductExportJob(
+    IFileExportServices<Product, AppDbContext> exporter,
+    AppDbContext db)
+{
+    public async Task RunAsync()
+    {
+        List<string> errors = await exporter.ExportToFileAsync(
+            basePath: @"C:\exports",
+            fileName: $"products_{DateTime.UtcNow:yyyyMMdd}.csv",
+            dataProvider: () => db.Products
+                                  .Where(p => p.DateDeletedUtc == null)
+                                  .ToListAsync(),
+            rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
+            headers: ["SKU", "Name", "Price"],
+            encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        if (errors.Count > 0)
+            Console.WriteLine(string.Join('\n', errors));
+    }
+}
+```
+
+**Stored procedure:**
+
+```csharp
+List<string> errors = await exporter.ExportToFileAsync(
+    basePath: @"C:\exports",
+    fileName: "report.csv",
+    dataProvider: () => db.Database
+                          .SqlQuery<Product>($"EXEC dbo.GetActiveProducts")
+                          .ToListAsync(),
+    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
+    headers: ["SKU", "Name", "Price"],
+    encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+```
+
+**Table-valued function:**
+
+```csharp
+List<string> errors = await exporter.ExportToFileAsync(
+    basePath: @"C:\exports",
+    fileName: "report.csv",
+    dataProvider: () => db.Database
+                          .SqlQuery<Product>($"SELECT * FROM dbo.GetProductsByCategory({categoryId})")
+                          .ToListAsync(),
+    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
+    headers: ["SKU", "Name", "Price"],
+    encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+```
+
+**Azure Blob Storage:**
+
+```csharp
+List<string> errors = await exporter.ExportToBlobAsync(
+    blobConnectionString: connectionString,
+    containerName: "exports",
+    blobPath: $"products/products_{DateTime.UtcNow:yyyyMMdd}.csv",
+    dataProvider: () => db.Products.ToListAsync(),
+    rowMapper: p => [p.Sku, p.Name, p.Price.ToString("F2")],
+    headers: ["SKU", "Name", "Price"],
+    encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+```
+
+---
+
+## ExportToFileAsync / ExportToBlobAsync reference
+
+Both methods return `Task<List<string>>` — an empty list means success. Argument errors (`basePath`, `fileName`, `blobConnectionString`, etc.) throw `ArgumentException`; data-provider and write failures are caught and returned in the list.
+
+### Local file system
+
+```csharp
+Task<List<string>> ExportToFileAsync(
+    string basePath,
+    string fileName,
+    Func<Task<List<T>>> dataProvider,
+    Func<T, IEnumerable<string>> rowMapper,
+    IEnumerable<string> headers,
+    Encoding encoding,
+    string delimiter = ",")
+```
+
+### Azure Blob Storage
+
+```csharp
+Task<List<string>> ExportToBlobAsync(
+    string blobConnectionString,
+    string containerName,
+    string blobPath,
+    Func<Task<List<T>>> dataProvider,
+    Func<T, IEnumerable<string>> rowMapper,
+    IEnumerable<string> headers,
+    Encoding encoding,
+    string delimiter = ",")
+```
+
+### Parameter reference
+
+| Parameter | Default | Description |
+|---|---|---|
+| `basePath` | — | Target directory (local or UNC). Must exist. |
+| `fileName` | — | Output file name, e.g. `"products_20260101.csv"` |
+| `blobConnectionString` | — | Azure Storage connection string |
+| `containerName` | — | Target blob container name |
+| `blobPath` | — | Full blob path, e.g. `"exports/products_20260101.csv"`. Overwrites if exists. |
+| `dataProvider` | — | Async delegate that returns the data set |
+| `rowMapper` | — | Maps one record to an ordered sequence of string field values |
+| `headers` | — | Column header names written as the first row. Empty sequence omits the header. |
+| `encoding` | — | Character encoding. UTF-8 without BOM recommended. |
+| `delimiter` | `","` | Column delimiter |
+
+### Field quoting
+
+`FileWriterServices` applies RFC 4180 quoting automatically. A field is wrapped in double-quotes when it contains the delimiter, a double-quote character, or a line terminator. Double-quote characters within a quoted field are escaped by doubling: `"`.
+
+---
+
 ## BaseObject
 
-All entities must inherit `BaseObject`, which provides soft-delete timestamps and a surrogate key:
+All import entities must inherit `BaseObject`, which provides soft-delete timestamps and a surrogate key:
 
 ```csharp
 public class BaseObject
@@ -289,6 +426,8 @@ public class BaseObject
 ```
 
 `DateDeletedUtc` is indexed automatically. Soft-deletes set this field; hard-deletes remove the row.
+
+Export data types do not need to extend `BaseObject` — the `T` in `IFileExportServices<T, C>` is constrained only to `class`.
 
 ---
 
