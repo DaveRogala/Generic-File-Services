@@ -292,9 +292,12 @@ public record ProductExportDto(
 ### 2. Register services
 
 ```csharp
-builder.Services.AddScoped<IFileWriterServices, FileWriterServices>();
-builder.Services.AddScoped<IFileExportServices<ProductExportDto, AppDbContext>,
-                           FileExportServices<ProductExportDto, AppDbContext>>();
+// With DbContext configuration:
+builder.Services.AddFileExportServices<ProductExportDto, AppDbContext>(
+    options => options.UseSqlServer(connectionString));
+
+// Or when DbContextFactory is already registered:
+builder.Services.AddFileExportServices<ProductExportDto, AppDbContext>();
 ```
 
 ### 3. Call it
@@ -395,10 +398,10 @@ Task<List<string>> ExportToFileAsync(
     string basePath,
     string fileName,
     Func<Task<List<T>>> dataProvider,
-    Func<T, IEnumerable<string>> rowMapper,
-    IEnumerable<string> headers,
     Encoding encoding,
-    string delimiter = ",")
+    string delimiter            = ",",
+    bool archiveExistingFile    = false,
+    string? archivePath         = null)
 ```
 
 ### Azure Blob Storage
@@ -409,8 +412,6 @@ Task<List<string>> ExportToBlobAsync(
     string containerName,
     string blobPath,
     Func<Task<List<T>>> dataProvider,
-    Func<T, IEnumerable<string>> rowMapper,
-    IEnumerable<string> headers,
     Encoding encoding,
     string delimiter = ",")
 ```
