@@ -36,6 +36,21 @@ public interface IFileWriterServices
     /// <param name="rows">Data rows; each inner sequence must contain the same number of fields as <paramref name="headers"/>.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <summary>
+    /// If a file named <paramref name="fileName"/> already exists in <paramref name="basePath"/>,
+    /// moves it to the archive directory with a UTC timestamp appended to the file stem.
+    /// Does nothing when the file does not exist.
+    /// The archive directory is created automatically if it does not exist.
+    /// </summary>
+    /// <param name="basePath">Directory containing the file to archive.</param>
+    /// <param name="fileName">Name of the file to archive, e.g. <c>"export.csv"</c>.</param>
+    /// <param name="archivePath">
+    /// Destination directory for the archived file.
+    /// Absolute paths are used as-is; relative paths are resolved relative to <paramref name="basePath"/>.
+    /// When <c>null</c>, defaults to an <c>archive</c> sub-folder of <paramref name="basePath"/>.
+    /// </param>
+    void ArchiveExistingFile(string basePath, string fileName, string? archivePath = null);
+
     Task WriteToBlobAsync(
         string blobConnectionString,
         string containerName,

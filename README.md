@@ -316,6 +316,36 @@ public class ProductExportJob(
 }
 ```
 
+**Archive an existing file before overwriting:**
+
+When `archiveExistingFile: true`, if the target file already exists it is timestamped and moved to the archive directory before the new file is written. The archive directory is created automatically if it does not exist.
+
+```csharp
+// Archive to the default 'archive' sub-folder of basePath
+List<string> errors = await exporter.ExportToFileAsync(
+    basePath: @"C:\exports",
+    fileName: "products.csv",
+    dataProvider: ...,
+    rowMapper: ...,
+    headers: ["SKU", "Name", "Price"],
+    encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+    archiveExistingFile: true);
+
+// Archive to an absolute path
+List<string> errors = await exporter.ExportToFileAsync(
+    ...,
+    archiveExistingFile: true,
+    archivePath: @"D:\archive\exports");
+
+// Archive to a path relative to basePath
+List<string> errors = await exporter.ExportToFileAsync(
+    ...,
+    archiveExistingFile: true,
+    archivePath: "old");
+```
+
+The archived file is named `<stem>_<yyyyMMddHHmmssfff><ext>` — for example, `products_20260511143022123.csv`.
+
 **Stored procedure:**
 
 ```csharp
@@ -404,6 +434,8 @@ Task<List<string>> ExportToBlobAsync(
 | `headers` | — | Column header names written as the first row. Empty sequence omits the header. |
 | `encoding` | — | Character encoding. UTF-8 without BOM recommended. |
 | `delimiter` | `","` | Column delimiter |
+| `archiveExistingFile` | `false` | Move an existing file at the target path to the archive directory before writing |
+| `archivePath` | `null` | Archive directory. Absolute paths used as-is; relative paths resolved relative to `basePath`. `null` defaults to `archive` sub-folder of `basePath`. |
 
 ### Field quoting
 

@@ -26,7 +26,9 @@ public class FileExportServices<T, C>(
         Func<T, IEnumerable<string>> rowMapper,
         IEnumerable<string> headers,
         Encoding encoding,
-        string delimiter = ",")
+        string delimiter = ",",
+        bool archiveExistingFile = false,
+        string? archivePath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(basePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
@@ -34,6 +36,9 @@ public class FileExportServices<T, C>(
         var errors = new List<string>();
         try
         {
+            if (archiveExistingFile)
+                _fileWriterServices.ArchiveExistingFile(basePath, fileName, archivePath);
+
             var data = await dataProvider();
             var rows = data.Select(rowMapper);
             _fileWriterServices.WriteToFile(basePath, fileName, headers, rows, encoding, delimiter);

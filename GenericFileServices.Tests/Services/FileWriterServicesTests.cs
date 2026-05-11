@@ -199,4 +199,120 @@ public class FileWriterServicesTests : IDisposable
         Assert.Equal("1,2,3", lines[1]);
         Assert.Equal("4,5,6", lines[2]);
     }
+
+    // ── ArchiveExistingFile — no-op ──────────────────────────────────────────
+
+    [Fact]
+    public void ArchiveExistingFile_DoesNothing_WhenFileDoesNotExist()
+    {
+        // Must not throw
+        _sut.ArchiveExistingFile(_tempDir, "nonexistent.csv");
+    }
+
+    // ── ArchiveExistingFile — default archive path ───────────────────────────
+
+    [Fact]
+    public void ArchiveExistingFile_MovesFileToArchiveSubFolder_WhenArchivePathIsNull()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv");
+
+        Assert.False(File.Exists(Path.Combine(_tempDir, "export.csv")));
+        Assert.Single(Directory.GetFiles(Path.Combine(_tempDir, "archive"), "export_*.csv"));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_CreatesArchiveDirectory_WhenItDoesNotExist()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv");
+
+        Assert.True(Directory.Exists(Path.Combine(_tempDir, "archive")));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_PreservesFileContent()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "original content");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv");
+
+        var archived = Directory.GetFiles(Path.Combine(_tempDir, "archive"), "export_*.csv");
+        Assert.Equal("original content", File.ReadAllText(archived[0]));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_PreservesFileExtension()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "report.tsv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "report.tsv");
+
+        Assert.Single(Directory.GetFiles(Path.Combine(_tempDir, "archive"), "report_*.tsv"));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_ArchivedNameContainsTimestamp_InExpectedFormat()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+        var before = DateTime.UtcNow;
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv");
+
+        var archived = Directory.GetFiles(Path.Combine(_tempDir, "archive"), "export_*.csv");
+        var stem = Path.GetFileNameWithoutExtension(archived[0]); // "export_yyyyMMddHHmmssfff"
+        var timestampPart = stem["export_".Length..];
+        Assert.True(DateTime.TryParseExact(
+            timestampPart, "yyyyMMddHHmmssfff",
+            null, System.Globalization.DateTimeStyles.None, out var parsed));
+        Assert.True(parsed >= before.AddSeconds(-1));
+    }
+
+    // ── ArchiveExistingFile — absolute archive path ──────────────────────────
+
+    [Fact]
+    public void ArchiveExistingFile_UsesAbsoluteArchivePath_WhenProvided()
+    {
+        var absoluteArchive = Path.Combine(_tempDir, "custom_archive");
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv", absoluteArchive);
+
+        Assert.Single(Directory.GetFiles(absoluteArchive, "export_*.csv"));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_CreatesAbsoluteArchiveDirectory_WhenItDoesNotExist()
+    {
+        var absoluteArchive = Path.Combine(_tempDir, "custom_archive");
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv", absoluteArchive);
+
+        Assert.True(Directory.Exists(absoluteArchive));
+    }
+
+    // ── ArchiveExistingFile — relative archive path ──────────────────────────
+
+    [Fact]
+    public void ArchiveExistingFile_ResolvesRelativeArchivePath_RelativeToBasePath()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv", "old");
+
+        Assert.Single(Directory.GetFiles(Path.Combine(_tempDir, "old"), "export_*.csv"));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_CreatesRelativeArchiveDirectory_WhenItDoesNotExist()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "export.csv"), "data");
+
+        _sut.ArchiveExistingFile(_tempDir, "export.csv", "old");
+
+        Assert.True(Directory.Exists(Path.Combine(_tempDir, "old")));
+    }
 }

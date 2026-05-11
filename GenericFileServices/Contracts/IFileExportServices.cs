@@ -38,6 +38,17 @@ public interface IFileExportServices<T, C>
     /// </param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="archiveExistingFile">
+    /// When <c>true</c> and a file named <paramref name="fileName"/> already exists in
+    /// <paramref name="basePath"/>, the existing file is timestamped and moved to the archive
+    /// directory before the new file is written.
+    /// </param>
+    /// <param name="archivePath">
+    /// Archive directory used when <paramref name="archiveExistingFile"/> is <c>true</c>.
+    /// Absolute paths are used as-is; relative paths are resolved relative to <paramref name="basePath"/>.
+    /// When <c>null</c>, defaults to an <c>archive</c> sub-folder of <paramref name="basePath"/>.
+    /// The directory is created automatically if it does not exist.
+    /// </param>
     /// <returns>A list of error messages. An empty list indicates a successful export.</returns>
     Task<List<string>> ExportToFileAsync(
         string basePath,
@@ -46,7 +57,9 @@ public interface IFileExportServices<T, C>
         Func<T, IEnumerable<string>> rowMapper,
         IEnumerable<string> headers,
         Encoding encoding,
-        string delimiter = ",");
+        string delimiter = ",",
+        bool archiveExistingFile = false,
+        string? archivePath = null);
 
     /// <summary>
     /// Fetches data via <paramref name="dataProvider"/>, maps it to file rows using

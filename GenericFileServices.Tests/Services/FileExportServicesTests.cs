@@ -198,6 +198,76 @@ public class FileExportServicesTests
             Times.Never);
     }
 
+    // ── ExportToFileAsync — archive existing file ────────────────────────────
+
+    [Fact]
+    public async Task ExportToFileAsync_DoesNotCallArchive_WhenFlagFalse()
+    {
+        await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8);
+
+        _writerMock.Verify(w => w.ArchiveExistingFile(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_CallsArchive_WhenFlagTrue()
+    {
+        await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            archiveExistingFile: true);
+
+        _writerMock.Verify(w => w.ArchiveExistingFile(BasePath, FileName, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ForwardsArchivePath_ToWriter()
+    {
+        await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            archiveExistingFile: true, archivePath: "/custom/archive");
+
+        _writerMock.Verify(w => w.ArchiveExistingFile(BasePath, FileName, "/custom/archive"), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ArchivesBeforeWriting()
+    {
+        var callOrder = new List<string>();
+        _writerMock
+            .Setup(w => w.ArchiveExistingFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback(() => callOrder.Add("archive"));
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<IEnumerable<string>>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>()))
+            .Callback<string, string, IEnumerable<string>, IEnumerable<IEnumerable<string>>, Encoding, string>(
+                (_, _, _, _, _, _) => callOrder.Add("write"));
+
+        await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            archiveExistingFile: true);
+
+        Assert.Equal(["archive", "write"], callOrder);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ReturnsErrors_WhenArchiveThrows()
+    {
+        _writerMock
+            .Setup(w => w.ArchiveExistingFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Throws(new IOException("access denied"));
+
+        var errors = await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), NameMapper, ["Name"], Encoding.UTF8,
+            archiveExistingFile: true);
+
+        Assert.Single(errors);
+        Assert.Contains("access denied", errors[0]);
+    }
+
     // ── ExportToBlobAsync — argument validation ───────────────────────────────
 
     [Fact]

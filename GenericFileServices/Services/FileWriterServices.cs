@@ -47,6 +47,32 @@ public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWrite
         await blobClient.UploadAsync(stream, overwrite: true);
     }
 
+    private static readonly string TimestampFormat = "yyyyMMddHHmmssfff";
+
+    /// <inheritdoc/>
+    public void ArchiveExistingFile(string basePath, string fileName, string? archivePath = null)
+    {
+        var sourcePath = Path.Combine(basePath, fileName);
+        if (!File.Exists(sourcePath))
+            return;
+
+        var resolvedArchivePath = archivePath is null
+            ? Path.Combine(basePath, "archive")
+            : Path.IsPathRooted(archivePath)
+                ? archivePath
+                : Path.Combine(basePath, archivePath);
+
+        Directory.CreateDirectory(resolvedArchivePath);
+
+        var timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        var destPath = Path.Combine(resolvedArchivePath, $"{name}_{timeStamp}{ext}");
+
+        File.Move(sourcePath, destPath);
+        _logger.LogInformation("Archived {FileName} to {DestPath}", fileName, destPath);
+    }
+
     private static void WriteContent(
         StreamWriter writer,
         IEnumerable<string> headers,
