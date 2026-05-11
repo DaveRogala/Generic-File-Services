@@ -11,7 +11,7 @@ public class FileExportServicesTests
 {
     private readonly Mock<IFileWriterServices> _writerMock = new();
     private readonly Mock<ILogger<FileExportServices<TestEntity, TestDbContext>>> _loggerMock = new();
-    private readonly FileExportServices<TestEntity, TestDbContext> _sut;
+    private readonly IFileExportServices<TestEntity, TestDbContext> _sut;
 
     private const string BasePath = "/exports";
     private const string FileName = "out.csv";

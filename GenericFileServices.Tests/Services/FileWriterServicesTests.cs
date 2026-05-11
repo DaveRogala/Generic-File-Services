@@ -7,7 +7,7 @@ namespace GenericFileServices.Tests.Services;
 
 public class FileWriterServicesTests : IDisposable
 {
-    private readonly FileWriterServices _sut;
+    private readonly IFileWriterServices _sut;
     private readonly string _tempDir;
 
     public FileWriterServicesTests()
