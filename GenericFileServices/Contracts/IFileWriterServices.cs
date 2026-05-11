@@ -36,6 +36,15 @@ public interface IFileWriterServices
     /// <param name="rows">Data rows; each inner sequence must contain the same number of fields as <paramref name="headers"/>.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    Task WriteToBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        IEnumerable<string> headers,
+        IEnumerable<IEnumerable<string>> rows,
+        Encoding encoding,
+        string delimiter = ",");
+
     /// <summary>
     /// If a file named <paramref name="fileName"/> already exists in <paramref name="basePath"/>,
     /// moves it to the archive directory with a UTC timestamp appended to the file stem.
@@ -50,13 +59,4 @@ public interface IFileWriterServices
     /// When <c>null</c>, defaults to an <c>archive</c> sub-folder of <paramref name="basePath"/>.
     /// </param>
     void ArchiveExistingFile(string basePath, string fileName, string? archivePath = null);
-
-    Task WriteToBlobAsync(
-        string blobConnectionString,
-        string containerName,
-        string blobPath,
-        IEnumerable<string> headers,
-        IEnumerable<IEnumerable<string>> rows,
-        Encoding encoding,
-        string delimiter = ",");
 }
