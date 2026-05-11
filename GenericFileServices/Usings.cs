@@ -1,0 +1,12 @@
+﻿global using Azure.Storage.Blobs;
+global using GenericFileServices.Contracts;
+global using GenericFileServices.Models;
+global using GenericFileServices.Models.Database.Base;
+global using GenericRepositories;
+global using GenericRepositories.Interfaces;
+global using MagellanFileServices.Contracts;
+global using MagellanFileServices.Models;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Logging;
+global using System.Text;
+global using System.Diagnostics.CodeAnalysis;
