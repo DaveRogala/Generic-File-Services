@@ -1,0 +1,78 @@
+namespace GenericFileServices.Services;
+
+/// <summary>
+/// Default implementation of <see cref="IFileExportServices{T,C}"/>.
+/// Fetches data via a consumer-supplied delegate, maps it to file rows,
+/// and delegates writing to <see cref="IFileWriterServices"/>.
+/// Argument validation errors propagate as <see cref="ArgumentException"/>;
+/// data-provider and writer errors are caught and returned in the errors list.
+/// </summary>
+/// <typeparam name="T">The type returned by the data provider.</typeparam>
+/// <typeparam name="C">EF Core <see cref="DbContext"/> type used by the consuming application.</typeparam>
+public class FileExportServices<T, C>(
+    IFileWriterServices fileWriterServices,
+    ILogger<FileExportServices<T, C>> logger) : IFileExportServices<T, C>
+    where T : class
+    where C : DbContext
+{
+    private readonly IFileWriterServices _fileWriterServices = fileWriterServices;
+    private readonly ILogger<FileExportServices<T, C>> _logger = logger;
+
+    /// <inheritdoc/>
+    public async Task<List<string>> ExportToFileAsync(
+        string basePath,
+        string fileName,
+        Func<Task<List<T>>> dataProvider,
+        Func<T, IEnumerable<string>> rowMapper,
+        IEnumerable<string> headers,
+        Encoding encoding,
+        string delimiter = ",")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(basePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        var errors = new List<string>();
+        try
+        {
+            var data = await dataProvider();
+            var rows = data.Select(rowMapper);
+            _fileWriterServices.WriteToFile(basePath, fileName, headers, rows, encoding, delimiter);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting {FileName} to {BasePath}", fileName, basePath);
+            errors.Add($"Export of {fileName} failed: {ex.Message}");
+        }
+        return errors;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<string>> ExportToBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        Func<Task<List<T>>> dataProvider,
+        Func<T, IEnumerable<string>> rowMapper,
+        IEnumerable<string> headers,
+        Encoding encoding,
+        string delimiter = ",")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(blobConnectionString);
+        ArgumentException.ThrowIfNullOrWhiteSpace(containerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(blobPath);
+
+        var errors = new List<string>();
+        try
+        {
+            var data = await dataProvider();
+            var rows = data.Select(rowMapper);
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, headers, rows, encoding, delimiter);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting to blob {BlobPath}", blobPath);
+            errors.Add($"Export to blob {blobPath} failed: {ex.Message}");
+        }
+        return errors;
+    }
+}
