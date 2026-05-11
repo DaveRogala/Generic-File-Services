@@ -1,6 +1,8 @@
-﻿global using GenericFileImportServices.Contracts;
+﻿global using Azure.Storage.Blobs;
+global using GenericFileImportServices.Contracts;
 global using GenericFileImportServices.Models;
 global using GenericFileImportServices.Models.Database.Base;
+global using GenericRepositories;
 global using GenericRepositories.Interfaces;
 global using MagellanFileServices.Contracts;
 global using MagellanFileServices.Models;

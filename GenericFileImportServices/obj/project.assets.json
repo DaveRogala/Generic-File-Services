@@ -2,54 +2,53 @@
   "version": 3,
   "targets": {
     "net10.0": {
-      "Azure.Core/1.50.0": {
+      "Azure.Core/1.44.1": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
-          "System.ClientModel": "1.8.0",
-          "System.Memory.Data": "8.0.1"
+          "Microsoft.Bcl.AsyncInterfaces": "6.0.0",
+          "System.ClientModel": "1.1.0",
+          "System.Memory.Data": "6.0.0"
         },
         "compile": {
-          "lib/net8.0/Azure.Core.dll": {
+          "lib/net6.0/Azure.Core.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net8.0/Azure.Core.dll": {
+          "lib/net6.0/Azure.Core.dll": {
             "related": ".xml"
           }
         }
       },
-      "Azure.Storage.Blobs/12.27.0": {
+      "Azure.Storage.Blobs/12.25.1": {
         "type": "package",
         "dependencies": {
-          "Azure.Core": "1.50.0",
-          "Azure.Storage.Common": "12.26.0"
+          "Azure.Storage.Common": "12.24.0"
         },
         "compile": {
-          "lib/net10.0/Azure.Storage.Blobs.dll": {
+          "lib/net8.0/Azure.Storage.Blobs.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net10.0/Azure.Storage.Blobs.dll": {
+          "lib/net8.0/Azure.Storage.Blobs.dll": {
             "related": ".xml"
           }
         }
       },
-      "Azure.Storage.Common/12.26.0": {
+      "Azure.Storage.Common/12.24.0": {
         "type": "package",
         "dependencies": {
-          "Azure.Core": "1.50.0",
-          "System.IO.Hashing": "10.0.1"
+          "Azure.Core": "1.44.1",
+          "System.IO.Hashing": "8.0.0"
         },
         "compile": {
-          "lib/net10.0/Azure.Storage.Common.dll": {
+          "lib/net8.0/Azure.Storage.Common.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net10.0/Azure.Storage.Common.dll": {
+          "lib/net8.0/Azure.Storage.Common.dll": {
             "related": ".xml"
           }
         }
@@ -67,7 +66,7 @@
           }
         }
       },
-      "GenericRepositories/10.1.1": {
+      "GenericRepositories/10.0.6": {
         "type": "package",
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "10.0.6",
@@ -80,13 +79,13 @@
           "lib/net10.0/GenericRepositories.dll": {}
         }
       },
-      "MagellanFileServices/3.1.0": {
+      "MagellanFileServices/3.0.0": {
         "type": "package",
         "dependencies": {
-          "Azure.Storage.Blobs": "12.27.0",
+          "Azure.Storage.Blobs": "12.25.1",
           "CsvHelper": "33.1.0",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.7",
-          "Microsoft.Extensions.Logging": "10.0.7"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0",
+          "Microsoft.Extensions.Logging": "10.0.0"
         },
         "compile": {
           "lib/net10.0/MagellanFileServices.dll": {
@@ -99,7 +98,7 @@
           }
         }
       },
-      "Microsoft.Bcl.AsyncInterfaces/8.0.0": {
+      "Microsoft.Bcl.AsyncInterfaces/6.0.0": {
         "type": "package",
         "compile": {
           "lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll": {
@@ -192,10 +191,10 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "Microsoft.Extensions.DependencyInjection/10.0.7": {
+      "Microsoft.Extensions.DependencyInjection/10.0.6": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.7"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.6"
         },
         "compile": {
           "lib/net10.0/Microsoft.Extensions.DependencyInjection.dll": {
@@ -211,7 +210,7 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.7": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.6": {
         "type": "package",
         "compile": {
           "lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
@@ -227,12 +226,12 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "Microsoft.Extensions.Logging/10.0.7": {
+      "Microsoft.Extensions.Logging/10.0.6": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection": "10.0.7",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.7",
-          "Microsoft.Extensions.Options": "10.0.7"
+          "Microsoft.Extensions.DependencyInjection": "10.0.6",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.6",
+          "Microsoft.Extensions.Options": "10.0.6"
         },
         "compile": {
           "lib/net10.0/Microsoft.Extensions.Logging.dll": {
@@ -248,10 +247,10 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "Microsoft.Extensions.Logging.Abstractions/10.0.7": {
+      "Microsoft.Extensions.Logging.Abstractions/10.0.6": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.7"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.6"
         },
         "compile": {
           "lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll": {
@@ -267,11 +266,11 @@
           "buildTransitive/net8.0/Microsoft.Extensions.Logging.Abstractions.targets": {}
         }
       },
-      "Microsoft.Extensions.Options/10.0.7": {
+      "Microsoft.Extensions.Options/10.0.6": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.7",
-          "Microsoft.Extensions.Primitives": "10.0.7"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.6",
+          "Microsoft.Extensions.Primitives": "10.0.6"
         },
         "compile": {
           "lib/net10.0/Microsoft.Extensions.Options.dll": {
@@ -287,7 +286,7 @@
           "buildTransitive/net8.0/Microsoft.Extensions.Options.targets": {}
         }
       },
-      "Microsoft.Extensions.Primitives/10.0.7": {
+      "Microsoft.Extensions.Primitives/10.0.6": {
         "type": "package",
         "compile": {
           "lib/net10.0/Microsoft.Extensions.Primitives.dll": {
@@ -303,94 +302,93 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "System.ClientModel/1.8.0": {
+      "System.ClientModel/1.1.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
-          "System.Memory.Data": "8.0.1"
+          "System.Memory.Data": "1.0.2"
         },
         "compile": {
-          "lib/net9.0/System.ClientModel.dll": {
+          "lib/net6.0/System.ClientModel.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net9.0/System.ClientModel.dll": {
+          "lib/net6.0/System.ClientModel.dll": {
             "related": ".xml"
           }
         }
       },
-      "System.IO.Hashing/10.0.1": {
+      "System.IO.Hashing/8.0.0": {
         "type": "package",
         "compile": {
-          "lib/net10.0/System.IO.Hashing.dll": {
+          "lib/net8.0/System.IO.Hashing.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net10.0/System.IO.Hashing.dll": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/net8.0/_._": {}
-        }
-      },
-      "System.Memory.Data/8.0.1": {
-        "type": "package",
-        "compile": {
-          "lib/net8.0/System.Memory.Data.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/System.Memory.Data.dll": {
+          "lib/net8.0/System.IO.Hashing.dll": {
             "related": ".xml"
           }
         },
         "build": {
           "buildTransitive/net6.0/_._": {}
         }
+      },
+      "System.Memory.Data/6.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/System.Memory.Data.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/System.Memory.Data.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/netcoreapp3.1/_._": {}
+        }
       }
     }
   },
   "libraries": {
-    "Azure.Core/1.50.0": {
-      "sha512": "GBNKZEhdIbTXxedvD3R7I/yDVFX9jJJEz02kCziFSJxspSQ5RMHc3GktulJ1s7+ffXaXD7kMgrtdQTaggyInLw==",
+    "Azure.Core/1.44.1": {
+      "sha512": "YyznXLQZCregzHvioip07/BkzjuWNXogJEVz9T5W6TwjNr17ax41YGzYMptlo2G10oLCuVPoyva62y0SIRDixg==",
       "type": "package",
-      "path": "azure.core/1.50.0",
+      "path": "azure.core/1.44.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "CHANGELOG.md",
         "README.md",
-        "azure.core.1.50.0.nupkg.sha512",
+        "azure.core.1.44.1.nupkg.sha512",
         "azure.core.nuspec",
         "azureicon.png",
-        "lib/net462/Azure.Core.dll",
-        "lib/net462/Azure.Core.xml",
+        "lib/net461/Azure.Core.dll",
+        "lib/net461/Azure.Core.xml",
         "lib/net472/Azure.Core.dll",
         "lib/net472/Azure.Core.xml",
-        "lib/net8.0/Azure.Core.dll",
-        "lib/net8.0/Azure.Core.xml",
+        "lib/net6.0/Azure.Core.dll",
+        "lib/net6.0/Azure.Core.xml",
         "lib/netstandard2.0/Azure.Core.dll",
         "lib/netstandard2.0/Azure.Core.xml"
       ]
     },
-    "Azure.Storage.Blobs/12.27.0": {
-      "sha512": "zI5rg1tTtnA8T2g2/21l+1iIUdDjpEQQ0FI1BabJVEQJ1JUyTQKrc41eNabAHs0SBHprl6pu/6OqIMK9Ve+4tQ==",
+    "Azure.Storage.Blobs/12.25.1": {
+      "sha512": "t5BZUBYly3Wi1ksifp8uVLIirE1XJm4MrTI1hsDDA2bi/M1a38m5thwsgdd3HAIkeh5a7lladDkwi1r6ZoLKYQ==",
       "type": "package",
-      "path": "azure.storage.blobs/12.27.0",
+      "path": "azure.storage.blobs/12.25.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "CHANGELOG.md",
         "README.md",
-        "azure.storage.blobs.12.27.0.nupkg.sha512",
+        "azure.storage.blobs.12.25.1.nupkg.sha512",
         "azure.storage.blobs.nuspec",
         "azureicon.png",
-        "lib/net10.0/Azure.Storage.Blobs.dll",
-        "lib/net10.0/Azure.Storage.Blobs.xml",
+        "lib/net6.0/Azure.Storage.Blobs.dll",
+        "lib/net6.0/Azure.Storage.Blobs.xml",
         "lib/net8.0/Azure.Storage.Blobs.dll",
         "lib/net8.0/Azure.Storage.Blobs.xml",
         "lib/netstandard2.0/Azure.Storage.Blobs.dll",
@@ -399,20 +397,20 @@
         "lib/netstandard2.1/Azure.Storage.Blobs.xml"
       ]
     },
-    "Azure.Storage.Common/12.26.0": {
-      "sha512": "XaT6CDcSshZb7KaCTwc6m4EouZbLBg7ciOEpsJSdJCvkNsZJQCvPKw7V5TtXno19AA1NpwtsZriYque8mzbQVg==",
+    "Azure.Storage.Common/12.24.0": {
+      "sha512": "JOmmSgNvH/zRWRihT6PZapEdTNESP4YtGS5OjbkUAg6EFiM6Ite7hDkqzJrA7QKmi1SRwZ40vpHi1McVpQuhgw==",
       "type": "package",
-      "path": "azure.storage.common/12.26.0",
+      "path": "azure.storage.common/12.24.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "CHANGELOG.md",
         "README.md",
-        "azure.storage.common.12.26.0.nupkg.sha512",
+        "azure.storage.common.12.24.0.nupkg.sha512",
         "azure.storage.common.nuspec",
         "azureicon.png",
-        "lib/net10.0/Azure.Storage.Common.dll",
-        "lib/net10.0/Azure.Storage.Common.xml",
+        "lib/net6.0/Azure.Storage.Common.dll",
+        "lib/net6.0/Azure.Storage.Common.xml",
         "lib/net8.0/Azure.Storage.Common.dll",
         "lib/net8.0/Azure.Storage.Common.xml",
         "lib/netstandard2.0/Azure.Storage.Common.dll",
@@ -445,51 +443,46 @@
         "lib/netstandard2.1/CsvHelper.xml"
       ]
     },
-    "GenericRepositories/10.1.1": {
-      "sha512": "gryAHgh9VW9aFUsc39ILVO2VImbM85H737WJVJGIKBAIIzBBdFb1wrrJ/zSZQmbW1xvQXE3edou0XEDAEb5rSw==",
+    "GenericRepositories/10.0.6": {
+      "sha512": "9GlgqR358Wv0jXDZd2cidDzeK90nTzgRKh8sBrnrjKZR/6CCMMUVaXn7Ls+5nBlRhxGgaOQbuSTQ0wcW3+aDNQ==",
       "type": "package",
-      "path": "genericrepositories/10.1.1",
+      "path": "genericrepositories/10.0.6",
       "files": [
         ".nupkg.metadata",
-        "README.md",
-        "genericrepositories.10.1.1.nupkg.sha512",
+        "genericrepositories.10.0.6.nupkg.sha512",
         "genericrepositories.nuspec",
         "lib/net10.0/GenericRepositories.dll"
       ]
     },
-    "MagellanFileServices/3.1.0": {
-      "sha512": "HwZZ6G7c+iYnsEFZ8yn6bXmZMHVKFTwVRekSnSIV7qWpIayYWI5ur9kG0oo4WQI64pn+WPSQcw6EK6d+gNNcKw==",
+    "MagellanFileServices/3.0.0": {
+      "sha512": "jjNqydsgt6e/eZBHIavHa+EX+hU/jx2kUM2SlzsRMznUy1OUwDiHoQjSymiMP3Ss8JuTpcslIwiPtM7iPWkjpA==",
       "type": "package",
-      "path": "magellanfileservices/3.1.0",
+      "path": "magellanfileservices/3.0.0",
       "files": [
         ".nupkg.metadata",
-        "README.md",
         "lib/net10.0/MagellanFileServices.dll",
         "lib/net10.0/MagellanFileServices.xml",
-        "magellanfileservices.3.1.0.nupkg.sha512",
+        "magellanfileservices.3.0.0.nupkg.sha512",
         "magellanfileservices.nuspec"
       ]
     },
-    "Microsoft.Bcl.AsyncInterfaces/8.0.0": {
-      "sha512": "3WA9q9yVqJp222P3x1wYIGDAkpjAku0TMUaaQV22g6L67AI0LdOIrVS7Ht2vJfLHGSPVuqN94vIr15qn+HEkHw==",
+    "Microsoft.Bcl.AsyncInterfaces/6.0.0": {
+      "sha512": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg==",
       "type": "package",
-      "path": "microsoft.bcl.asyncinterfaces/8.0.0",
+      "path": "microsoft.bcl.asyncinterfaces/6.0.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
         "LICENSE.TXT",
-        "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/Microsoft.Bcl.AsyncInterfaces.targets",
-        "buildTransitive/net462/_._",
-        "lib/net462/Microsoft.Bcl.AsyncInterfaces.dll",
-        "lib/net462/Microsoft.Bcl.AsyncInterfaces.xml",
+        "lib/net461/Microsoft.Bcl.AsyncInterfaces.dll",
+        "lib/net461/Microsoft.Bcl.AsyncInterfaces.xml",
         "lib/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll",
         "lib/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.xml",
         "lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll",
         "lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.xml",
-        "microsoft.bcl.asyncinterfaces.8.0.0.nupkg.sha512",
+        "microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
         "microsoft.bcl.asyncinterfaces.nuspec",
         "useSharedDesignerContext.txt"
       ]
@@ -597,10 +590,10 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.DependencyInjection/10.0.7": {
-      "sha512": "91F/o3emPV/+xY/ip3s2LqDNF14kjttlVtq0BXgg6p4MnCzeSZxnUJm+t6WRrtD3JdGo88/oX+z7OwK4y8PZuw==",
+    "Microsoft.Extensions.DependencyInjection/10.0.6": {
+      "sha512": "poUvwtf92bEs8uBH3aRRs/ZgiAw+Z485EU7TtVPBt//MmD0uMPERe7+v3Ur7lpD8XgIEDL9sDoTBcW1LMG97CQ==",
       "type": "package",
-      "path": "microsoft.extensions.dependencyinjection/10.0.7",
+      "path": "microsoft.extensions.dependencyinjection/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -623,15 +616,15 @@
         "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.xml",
         "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.dll",
         "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.xml",
-        "microsoft.extensions.dependencyinjection.10.0.7.nupkg.sha512",
+        "microsoft.extensions.dependencyinjection.10.0.6.nupkg.sha512",
         "microsoft.extensions.dependencyinjection.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.7": {
-      "sha512": "Z6mfFEaFcwCfSboxJwOLfu7/31npCY9q70WUamHW/vRQhDvBKOT4Vf9YkZj5J6hLvJpb0oDEYfHunQZj0xxvKw==",
+    "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.6": {
+      "sha512": "w+dX4SIr1X9yegX2yX2dU1XtP4JAUVNdvOG/Evn+H+ndn96YzfIPX52FALXChrRNWFR9l77FQyg1mB7WQo6iOA==",
       "type": "package",
-      "path": "microsoft.extensions.dependencyinjection.abstractions/10.0.7",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -654,15 +647,15 @@
         "lib/netstandard2.0/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
         "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
         "lib/netstandard2.1/Microsoft.Extensions.DependencyInjection.Abstractions.xml",
-        "microsoft.extensions.dependencyinjection.abstractions.10.0.7.nupkg.sha512",
+        "microsoft.extensions.dependencyinjection.abstractions.10.0.6.nupkg.sha512",
         "microsoft.extensions.dependencyinjection.abstractions.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Logging/10.0.7": {
-      "sha512": "hOeRIQ63GkgiYCB/MIFp+LQs8aXpJXpB55t6Aj37ab7t2/6WeFcPXxYM9hdy/o5tffzwf8mhqzLJP6mjGYCxjw==",
+    "Microsoft.Extensions.Logging/10.0.6": {
+      "sha512": "ZjpnbMD88IcZQE2pE9lcGv3mkH2mlApPWNh88ya1wJpcxZLp7p4aN7twI2FpawGPAsXNpmMgtKaz3o796YWKWQ==",
       "type": "package",
-      "path": "microsoft.extensions.logging/10.0.7",
+      "path": "microsoft.extensions.logging/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -685,15 +678,15 @@
         "lib/netstandard2.0/Microsoft.Extensions.Logging.xml",
         "lib/netstandard2.1/Microsoft.Extensions.Logging.dll",
         "lib/netstandard2.1/Microsoft.Extensions.Logging.xml",
-        "microsoft.extensions.logging.10.0.7.nupkg.sha512",
+        "microsoft.extensions.logging.10.0.6.nupkg.sha512",
         "microsoft.extensions.logging.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Logging.Abstractions/10.0.7": {
-      "sha512": "tIEcQ2gvERrH2KiCjdsVcHGhXt9lIsuDStfOIeZWr7/fP8IXhGiYfx0/80PNI7WPO2IYuFtlZLSlnTS8+/Mchw==",
+    "Microsoft.Extensions.Logging.Abstractions/10.0.6": {
+      "sha512": "1YgBO3wAy0dlpQyVTKWBSPND/t0yZHsvd3shGpbeEwH8JSb2hnFI2pNFrOOUi/stsp+T/dqwqmRIGh47ibo9bw==",
       "type": "package",
-      "path": "microsoft.extensions.logging.abstractions/10.0.7",
+      "path": "microsoft.extensions.logging.abstractions/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -757,15 +750,15 @@
         "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.xml",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.xml",
-        "microsoft.extensions.logging.abstractions.10.0.7.nupkg.sha512",
+        "microsoft.extensions.logging.abstractions.10.0.6.nupkg.sha512",
         "microsoft.extensions.logging.abstractions.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Options/10.0.7": {
-      "sha512": "00SHUGTh2jSMvIr6x9Xwd2nE+B5/qFCO/9hDwUDhJsjYRDlADmaBZ7tqehXzBDsfjHSXJzuRHJzPYPPjphBQ7Q==",
+    "Microsoft.Extensions.Options/10.0.6": {
+      "sha512": "v5RTWm+3Gdub21ADJeRG5bunOOxutFNBZk6qGH6Az4L5nyRZoLe3Kse7jfAyUcdEoiKp72XpNw/wGR+9wP+MtQ==",
       "type": "package",
-      "path": "microsoft.extensions.options/10.0.7",
+      "path": "microsoft.extensions.options/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -803,15 +796,15 @@
         "lib/netstandard2.0/Microsoft.Extensions.Options.xml",
         "lib/netstandard2.1/Microsoft.Extensions.Options.dll",
         "lib/netstandard2.1/Microsoft.Extensions.Options.xml",
-        "microsoft.extensions.options.10.0.7.nupkg.sha512",
+        "microsoft.extensions.options.10.0.6.nupkg.sha512",
         "microsoft.extensions.options.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Primitives/10.0.7": {
-      "sha512": "D5M0Jr551iTgwkZMN9rm0pSkgNLj5quUWQUmQPMZh7k/bnvZTnXRGfE2KuvXf1EEjt/ofD9yw9IumpgdP9QCnw==",
+    "Microsoft.Extensions.Primitives/10.0.6": {
+      "sha512": "L8P21mqaG+CXvPheLndean/cHCOcItJqH8nx+0YQnK7wAiOR0G1IOC418ZSzTMD2D6Gmo0f2M5WR70XtpX2B8g==",
       "type": "package",
-      "path": "microsoft.extensions.primitives/10.0.7",
+      "path": "microsoft.extensions.primitives/10.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -832,65 +825,33 @@
         "lib/net9.0/Microsoft.Extensions.Primitives.xml",
         "lib/netstandard2.0/Microsoft.Extensions.Primitives.dll",
         "lib/netstandard2.0/Microsoft.Extensions.Primitives.xml",
-        "microsoft.extensions.primitives.10.0.7.nupkg.sha512",
+        "microsoft.extensions.primitives.10.0.6.nupkg.sha512",
         "microsoft.extensions.primitives.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
-    "System.ClientModel/1.8.0": {
-      "sha512": "AqRzhn0v29GGGLj/Z6gKq4lGNtvPHT4nHdG5PDJh9IfVjv/nYUVmX11hwwws1vDFeIAzrvmn0dPu8IjLtu6fAw==",
+    "System.ClientModel/1.1.0": {
+      "sha512": "UocOlCkxLZrG2CKMAAImPcldJTxeesHnHGHwhJ0pNlZEvEXcWKuQvVOER2/NiOkJGRJk978SNdw3j6/7O9H1lg==",
       "type": "package",
-      "path": "system.clientmodel/1.8.0",
+      "path": "system.clientmodel/1.1.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "CHANGELOG.md",
         "DotNetPackageIcon.png",
         "README.md",
-        "analyzers/dotnet/cs/System.ClientModel.SourceGeneration.dll",
-        "lib/net8.0/System.ClientModel.dll",
-        "lib/net8.0/System.ClientModel.xml",
-        "lib/net9.0/System.ClientModel.dll",
-        "lib/net9.0/System.ClientModel.xml",
+        "lib/net6.0/System.ClientModel.dll",
+        "lib/net6.0/System.ClientModel.xml",
         "lib/netstandard2.0/System.ClientModel.dll",
         "lib/netstandard2.0/System.ClientModel.xml",
-        "system.clientmodel.1.8.0.nupkg.sha512",
+        "system.clientmodel.1.1.0.nupkg.sha512",
         "system.clientmodel.nuspec"
       ]
     },
-    "System.IO.Hashing/10.0.1": {
-      "sha512": "Dy6ULPb2S0GmNndjKrEIpfibNsc8+FTOoZnqygtFDuyun8vWboQbfMpQtKUXpgTxokR5E4zFHETpNnGfeWY6NA==",
+    "System.IO.Hashing/8.0.0": {
+      "sha512": "ne1843evDugl0md7Fjzy6QjJrzsjh46ZKbhf8GwBXb5f/gw97J4bxMs0NQKifDuThh/f0bZ0e62NPl1jzTuRqA==",
       "type": "package",
-      "path": "system.io.hashing/10.0.1",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "PACKAGE.md",
-        "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/System.IO.Hashing.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net8.0/_._",
-        "buildTransitive/netcoreapp2.0/System.IO.Hashing.targets",
-        "lib/net10.0/System.IO.Hashing.dll",
-        "lib/net10.0/System.IO.Hashing.xml",
-        "lib/net462/System.IO.Hashing.dll",
-        "lib/net462/System.IO.Hashing.xml",
-        "lib/net8.0/System.IO.Hashing.dll",
-        "lib/net8.0/System.IO.Hashing.xml",
-        "lib/net9.0/System.IO.Hashing.dll",
-        "lib/net9.0/System.IO.Hashing.xml",
-        "lib/netstandard2.0/System.IO.Hashing.dll",
-        "lib/netstandard2.0/System.IO.Hashing.xml",
-        "system.io.hashing.10.0.1.nupkg.sha512",
-        "system.io.hashing.nuspec",
-        "useSharedDesignerContext.txt"
-      ]
-    },
-    "System.Memory.Data/8.0.1": {
-      "sha512": "BVYuec3jV23EMRDeR7Dr1/qhx7369dZzJ9IWy2xylvb4YfXsrUxspWc4UWYid/tj4zZK58uGZqn2WQiaDMhmAg==",
-      "type": "package",
-      "path": "system.memory.data/8.0.1",
+      "path": "system.io.hashing/8.0.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -898,21 +859,44 @@
         "LICENSE.TXT",
         "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/System.Memory.Data.targets",
+        "buildTransitive/net461/System.IO.Hashing.targets",
         "buildTransitive/net462/_._",
         "buildTransitive/net6.0/_._",
+        "buildTransitive/netcoreapp2.0/System.IO.Hashing.targets",
+        "lib/net462/System.IO.Hashing.dll",
+        "lib/net462/System.IO.Hashing.xml",
+        "lib/net6.0/System.IO.Hashing.dll",
+        "lib/net6.0/System.IO.Hashing.xml",
+        "lib/net7.0/System.IO.Hashing.dll",
+        "lib/net7.0/System.IO.Hashing.xml",
+        "lib/net8.0/System.IO.Hashing.dll",
+        "lib/net8.0/System.IO.Hashing.xml",
+        "lib/netstandard2.0/System.IO.Hashing.dll",
+        "lib/netstandard2.0/System.IO.Hashing.xml",
+        "system.io.hashing.8.0.0.nupkg.sha512",
+        "system.io.hashing.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "System.Memory.Data/6.0.0": {
+      "sha512": "ntFHArH3I4Lpjf5m4DCXQHJuGwWPNVJPaAvM95Jy/u+2Yzt2ryiyIN04LAogkjP9DeRcEOiviAjQotfmPq/FrQ==",
+      "type": "package",
+      "path": "system.memory.data/6.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "buildTransitive/netcoreapp2.0/System.Memory.Data.targets",
-        "lib/net462/System.Memory.Data.dll",
-        "lib/net462/System.Memory.Data.xml",
+        "buildTransitive/netcoreapp3.1/_._",
+        "lib/net461/System.Memory.Data.dll",
+        "lib/net461/System.Memory.Data.xml",
         "lib/net6.0/System.Memory.Data.dll",
         "lib/net6.0/System.Memory.Data.xml",
-        "lib/net7.0/System.Memory.Data.dll",
-        "lib/net7.0/System.Memory.Data.xml",
-        "lib/net8.0/System.Memory.Data.dll",
-        "lib/net8.0/System.Memory.Data.xml",
         "lib/netstandard2.0/System.Memory.Data.dll",
         "lib/netstandard2.0/System.Memory.Data.xml",
-        "system.memory.data.8.0.1.nupkg.sha512",
+        "system.memory.data.6.0.0.nupkg.sha512",
         "system.memory.data.nuspec",
         "useSharedDesignerContext.txt"
       ]
@@ -920,43 +904,37 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "GenericRepositories >= 10.1.1",
-      "MagellanFileServices >= 3.1.0"
+      "Azure.Storage.Blobs >= 12.25.1",
+      "GenericRepositories >= 10.0.6",
+      "MagellanFileServices >= 3.0.0"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\tdev6f9\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "/Users/davidrogala/.nuget/packages/": {}
   },
   "project": {
     "version": "2.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj",
+      "projectUniqueName": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj",
       "projectName": "GenericFileImportServices",
-      "projectPath": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\GenericFileImportServices.csproj",
-      "packagesPath": "C:\\Users\\tdev6f9\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\tdev6f9\\source\\repos\\generic-file-importer\\GenericFileImportServices\\obj\\",
+      "projectPath": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/GenericFileImportServices.csproj",
+      "packagesPath": "/Users/davidrogala/.nuget/packages/",
+      "outputPath": "/Volumes/External Drive/Source/repos/Generic-File-Services/GenericFileImportServices/obj/",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\tdev6f9\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "/Volumes/External Drive/Source/repos/Generic-File-Services/NuGet.Config",
+        "/Users/davidrogala/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "https://api.nuget.org/v3/index.json": {},
-        "https://artifactory-saas.mtb.com/artifactory/api/nuget/v3/m4g-nuget-dev/index.json": {},
-        "https://artifactory-saas.mtb.com/artifactory/api/nuget/v3/m4g-nuget-prod/index.json": {}
+        "/Users/davidrogala/LocalNuGet": {},
+        "/Volumes/External Drive/Source/nuget/packages": {},
+        "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
-          "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {}
         }
@@ -975,16 +953,19 @@
     },
     "frameworks": {
       "net10.0": {
-        "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
+          "Azure.Storage.Blobs": {
+            "target": "Package",
+            "version": "[12.25.1, )"
+          },
           "GenericRepositories": {
             "target": "Package",
-            "version": "[10.1.1, )"
+            "version": "[10.0.6, )"
           },
           "MagellanFileServices": {
             "target": "Package",
-            "version": "[3.1.0, )"
+            "version": "[3.0.0, )"
           }
         },
         "imports": [
@@ -1003,7 +984,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.203/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",
