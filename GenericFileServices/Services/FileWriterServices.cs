@@ -5,9 +5,10 @@ namespace GenericFileServices.Services;
 /// Uses CsvHelper for CSV serialisation and writes to a local/network path
 /// or an Azure Blob Storage container.
 /// </summary>
-public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWriterServices
+public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientFactory blobClientFactory) : IFileWriterServices
 {
     private readonly ILogger<FileWriterServices> _logger = logger;
+    private readonly IBlobClientFactory _blobClientFactory = blobClientFactory;
     private static readonly string TimestampFormat = "yyyyMMddHHmmssfff";
 
     /// <inheritdoc/>
@@ -35,8 +36,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWrite
         string delimiter = ",")
     {
         _logger.LogInformation("Writing export blob {BlobPath} to container {ContainerName}", blobPath, containerName);
-        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
-        var blobClient = containerClient.GetBlobClient(blobPath);
+        var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
 
         using var stream = new MemoryStream();
         await using (var writer = new StreamWriter(stream, encoding, leaveOpen: true))
@@ -79,8 +79,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWrite
         string blobPath,
         string? archivePath = null)
     {
-        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
-        var blobClient = containerClient.GetBlobClient(blobPath);
+        var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
 
         if (!await blobClient.ExistsAsync())
             return;
@@ -103,7 +102,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWrite
         }
 
         var archiveBlobPath = $"{resolvedArchiveDir}/{archivedFileName}";
-        var archiveBlobClient = containerClient.GetBlobClient(archiveBlobPath);
+        var archiveBlobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, archiveBlobPath);
 
         using var stream = new MemoryStream();
         await blobClient.DownloadToAsync(stream);

@@ -89,6 +89,7 @@ public static class FileServiceCollectionExtensions
         where T : class
         where M : DbContext
     {
+        services.AddSingleton<IBlobClientFactory, BlobClientFactory>();
         services.AddScoped<IFileWriterServices, FileWriterServices>();
         services.AddScoped<IFileExportServices<T, M>, FileExportServices<T, M>>();
         return services;

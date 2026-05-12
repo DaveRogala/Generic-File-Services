@@ -1,4 +1,8 @@
 using System.Text;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using GenericFileServices.Contracts;
 using GenericFileServices.Services;
 using GenericFileServices.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
@@ -8,12 +12,17 @@ namespace GenericFileServices.Tests.Services;
 
 public class FileWriterServicesTests : IDisposable
 {
+    private readonly Mock<IBlobClientFactory> _factoryMock = new();
     private readonly IFileWriterServices _sut;
     private readonly string _tempDir;
 
+    private const string ConnStr = "connstr";
+    private const string Container = "mycontainer";
+    private const string BlobPath = "exports/out.csv";
+
     public FileWriterServicesTests()
     {
-        _sut = new FileWriterServices(new Mock<ILogger<FileWriterServices>>().Object);
+        _sut = new FileWriterServices(new Mock<ILogger<FileWriterServices>>().Object, _factoryMock.Object);
         _tempDir = Path.Combine(Path.GetTempPath(), $"gfs_writer_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }
@@ -228,5 +237,222 @@ public class FileWriterServicesTests : IDisposable
         _sut.ArchiveExistingFile(_tempDir, "export.csv", "old");
 
         Assert.True(Directory.Exists(Path.Combine(_tempDir, "old")));
+    }
+
+    // ── WriteToBlobAsync ─────────────────────────────────────────────────────
+
+    private (Mock<BlobClient> blob, string captured) SetupWriteBlob()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath))
+            .Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) =>
+            {
+                s.Position = 0;
+                captured = new StreamReader(s).ReadToEnd();
+            })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        return (blobMock, captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_CallsUpload_WithOverwriteTrue()
+    {
+        var blobMock = new Mock<BlobClient>();
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false));
+
+        blobMock.Verify(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_ContentContainsHeaderRow()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false));
+
+        Assert.Contains("Name,Value", captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_ContentContainsDataRows()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1), new ExportTestDto("Bob", 2) }, new UTF8Encoding(false));
+
+        Assert.Contains("Alice,1", captured);
+        Assert.Contains("Bob,2", captured);
+    }
+
+    // ── ArchiveExistingBlobAsync ──────────────────────────────────────────────
+
+    private (Mock<BlobClient> source, Mock<BlobClient> archive) SetupArchiveBlob(
+        bool exists, string? customArchivePath = null)
+    {
+        var sourceMock = new Mock<BlobClient>();
+        var archiveMock = new Mock<BlobClient>();
+
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath))
+            .Returns(sourceMock.Object);
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
+            .Returns(archiveMock.Object);
+
+        sourceMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Response.FromValue(exists, Mock.Of<Response>()));
+        sourceMock.Setup(b => b.DownloadToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response>());
+        sourceMock.Setup(b => b.DeleteAsync(
+                It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        return (sourceMock, archiveMock);
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_DoesNothing_WhenBlobDoesNotExist()
+    {
+        var (sourceMock, archiveMock) = SetupArchiveBlob(exists: false);
+
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
+
+        archiveMock.Verify(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        sourceMock.Verify(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_UsesDefaultArchivePath_WhenArchivePathIsNull()
+    {
+        SetupArchiveBlob(exists: true);
+        string? capturedPath = null;
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
+            .Callback<string, string, string>((_, _, p) => capturedPath = p)
+            .Returns(new Mock<BlobClient>().Object);
+
+        // Re-setup the archive mock return after callback override
+        var archiveMock = new Mock<BlobClient>();
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
+            .Callback<string, string, string>((_, _, p) => capturedPath = p)
+            .Returns(archiveMock.Object);
+
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
+
+        Assert.NotNull(capturedPath);
+        Assert.StartsWith("exports/archive/out_", capturedPath);
+        Assert.EndsWith(".csv", capturedPath);
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_UsesArchivePrefix_WhenBlobIsAtRoot()
+    {
+        const string rootBlob = "out.csv";
+        var rootBlobMock = new Mock<BlobClient>();
+        var archiveMock = new Mock<BlobClient>();
+        string? capturedPath = null;
+
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, rootBlob)).Returns(rootBlobMock.Object);
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != rootBlob)))
+            .Callback<string, string, string>((_, _, p) => capturedPath = p)
+            .Returns(archiveMock.Object);
+
+        rootBlobMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
+        rootBlobMock.Setup(b => b.DownloadToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response>());
+        rootBlobMock.Setup(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, rootBlob);
+
+        Assert.NotNull(capturedPath);
+        Assert.StartsWith("archive/out_", capturedPath);
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_UsesCustomArchivePath_WhenProvided()
+    {
+        SetupArchiveBlob(exists: true);
+        string? capturedPath = null;
+        var archiveMock = new Mock<BlobClient>();
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
+            .Callback<string, string, string>((_, _, p) => capturedPath = p)
+            .Returns(archiveMock.Object);
+
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, archivePath: "old/exports");
+
+        Assert.NotNull(capturedPath);
+        Assert.StartsWith("old/exports/out_", capturedPath);
+        Assert.EndsWith(".csv", capturedPath);
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_ArchivedNameContainsTimestamp_InExpectedFormat()
+    {
+        SetupArchiveBlob(exists: true);
+        string? capturedPath = null;
+        var archiveMock = new Mock<BlobClient>();
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        _factoryMock
+            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
+            .Callback<string, string, string>((_, _, p) => capturedPath = p)
+            .Returns(archiveMock.Object);
+
+        var before = DateTime.UtcNow;
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
+
+        var fileName = Path.GetFileNameWithoutExtension(capturedPath!);
+        var timestampPart = fileName["out_".Length..];
+        Assert.True(DateTime.TryParseExact(
+            timestampPart, "yyyyMMddHHmmssfff",
+            null, System.Globalization.DateTimeStyles.None, out var parsed));
+        Assert.True(parsed >= before.AddSeconds(-1));
+    }
+
+    [Fact]
+    public async Task ArchiveExistingBlobAsync_DeletesOriginalBlob_AfterCopy()
+    {
+        var (sourceMock, _) = SetupArchiveBlob(exists: true);
+
+        await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
+
+        sourceMock.Verify(b => b.DeleteAsync(
+            It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
