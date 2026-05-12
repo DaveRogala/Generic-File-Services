@@ -19,6 +19,10 @@ public interface IFileWriterServices
     /// <param name="records">Data records to serialise.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="metadataHeader">
+    /// Optional metadata lines to write before the encoding and column header rows.
+    /// Entries are written in ascending key order; gaps in the key sequence are ignored.
+    /// </param>
     /// <param name="writeHeader">When <c>true</c> (the default), writes a column header row derived from <typeparamref name="T"/>. Set to <c>false</c> to produce a data-only file.</param>
     /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the file.</param>
     /// <param name="encodingHeaderOverride">
@@ -31,6 +35,7 @@ public interface IFileWriterServices
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null);
@@ -47,6 +52,10 @@ public interface IFileWriterServices
     /// <param name="records">Data records to serialise.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="metadataHeader">
+    /// Optional metadata lines to write before the encoding and column header rows.
+    /// Entries are written in ascending key order; gaps in the key sequence are ignored.
+    /// </param>
     /// <param name="writeHeader">When <c>true</c> (the default), writes a column header row derived from <typeparamref name="T"/>. Set to <c>false</c> to produce a data-only blob.</param>
     /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the blob content.</param>
     /// <param name="encodingHeaderOverride">
@@ -60,6 +69,7 @@ public interface IFileWriterServices
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null);

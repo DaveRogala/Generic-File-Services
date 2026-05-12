@@ -27,6 +27,7 @@ public class FileExportServices<T, C>(
         string delimiter = ",",
         bool archiveExistingFile = false,
         string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
@@ -41,7 +42,7 @@ public class FileExportServices<T, C>(
                 _fileWriterServices.ArchiveExistingFile(basePath, fileName, archivePath);
 
             var data = await dataProvider();
-            _fileWriterServices.WriteToFile(basePath, fileName, data, encoding, delimiter, writeHeader, writeEncodingHeader, encodingHeaderOverride);
+            _fileWriterServices.WriteToFile(basePath, fileName, data, encoding, delimiter, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride);
         }
         catch (Exception ex)
         {
@@ -61,6 +62,7 @@ public class FileExportServices<T, C>(
         string delimiter = ",",
         bool archiveExistingBlob = false,
         string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
@@ -76,7 +78,7 @@ public class FileExportServices<T, C>(
                 await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath);
 
             var data = await dataProvider();
-            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter, writeHeader, writeEncodingHeader, encodingHeaderOverride);
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride);
         }
         catch (Exception ex)
         {

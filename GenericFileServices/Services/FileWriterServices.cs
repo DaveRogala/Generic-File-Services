@@ -18,6 +18,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
@@ -25,6 +26,9 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         var path = Path.Combine(basePath, fileName);
         _logger.LogInformation("Writing export file {FileName} to {BasePath}", fileName, basePath);
         using var writer = new StreamWriter(path, append: false, encoding);
+        if (metadataHeader is not null)
+            foreach (var kvp in metadataHeader.OrderBy(k => k.Key))
+                writer.WriteLine(kvp.Value);
         if (writeEncodingHeader)
             writer.WriteLine(encodingHeaderOverride ?? encoding.WebName);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -43,6 +47,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
@@ -53,6 +58,9 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         using var stream = new MemoryStream();
         await using (var writer = new StreamWriter(stream, encoding, leaveOpen: true))
         {
+            if (metadataHeader is not null)
+                foreach (var kvp in metadataHeader.OrderBy(k => k.Key))
+                    await writer.WriteLineAsync(kvp.Value);
             if (writeEncodingHeader)
                 await writer.WriteLineAsync(encodingHeaderOverride ?? encoding.WebName);
             using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)

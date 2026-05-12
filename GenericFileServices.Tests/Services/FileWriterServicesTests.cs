@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using Azure;
 using Azure.Storage.Blobs;
@@ -642,5 +643,104 @@ public class FileWriterServicesTests : IDisposable
         sourceMock.Verify(b => b.DeleteAsync(
             It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ── WriteToFile — metadata header ──────────────────────────────────────────
+
+    [Fact]
+    public void WriteToFile_WritesMetadataLines_InKeyOrder()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 3, "Line3" }, { 1, "Line1" }, { 2, "Line2" } });
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Line1", lines[0]);
+        Assert.Equal("Line2", lines[1]);
+        Assert.Equal("Line3", lines[2]);
+        Assert.Equal("Name,Value", lines[3]);
+    }
+
+    [Fact]
+    public void WriteToFile_IgnoresGaps_InMetadataKeys()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 1, "First" }, { 10, "Tenth" } });
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("First", lines[0]);
+        Assert.Equal("Tenth", lines[1]);
+        Assert.Equal("Name,Value", lines[2]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesMetadataBeforeEncodingHeader()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 1, "MetaLine" } },
+            writeEncodingHeader: true);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("MetaLine", lines[0]);
+        Assert.Equal("utf-8", lines[1]);
+        Assert.Equal("Name,Value", lines[2]);
+    }
+
+    [Fact]
+    public void WriteToFile_DoesNotWriteMetadata_WhenNull()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false));
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Name,Value", lines[0]);
+    }
+
+    // ── WriteToBlobAsync — metadata header ──────────────────────────────────────
+
+    [Fact]
+    public async Task WriteToBlobAsync_WritesMetadataLines_InKeyOrder()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 2, "B" }, { 1, "A" } });
+
+        var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal("A", lines[0].Trim());
+        Assert.Equal("B", lines[1].Trim());
+        Assert.Equal("Name,Value", lines[2].Trim());
+        Assert.Contains("Alice,1", lines[3]);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_WritesMetadataBeforeEncodingHeader()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 1, "MetaLine" } },
+            writeEncodingHeader: true);
+
+        var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal("MetaLine", lines[0].Trim());
+        Assert.Equal("utf-8", lines[1].Trim());
+        Assert.Equal("Name,Value", lines[2].Trim());
     }
 }

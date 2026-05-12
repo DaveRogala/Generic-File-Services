@@ -44,6 +44,10 @@ public interface IFileExportServices<T, C>
     /// When <c>null</c>, defaults to an <c>archive</c> sub-folder of <paramref name="basePath"/>.
     /// The directory is created automatically if it does not exist.
     /// </param>
+    /// <param name="metadataHeader">
+    /// Optional metadata lines written before the encoding and column header rows.
+    /// Entries are written in ascending key order; gaps in the key sequence are ignored.
+    /// </param>
     /// <param name="writeHeader">When <c>true</c> (the default), writes a column header row. Set to <c>false</c> to produce a data-only file.</param>
     /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the file.</param>
     /// <param name="encodingHeaderOverride">
@@ -59,6 +63,7 @@ public interface IFileExportServices<T, C>
         string delimiter = ",",
         bool archiveExistingFile = false,
         string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null);
@@ -88,6 +93,10 @@ public interface IFileExportServices<T, C>
     /// Blob path prefix for the archived blob, used when <paramref name="archiveExistingBlob"/> is <c>true</c>.
     /// When <c>null</c>, defaults to an <c>archive</c> folder inside the blob's current directory.
     /// </param>
+    /// <param name="metadataHeader">
+    /// Optional metadata lines written before the encoding and column header rows.
+    /// Entries are written in ascending key order; gaps in the key sequence are ignored.
+    /// </param>
     /// <param name="writeHeader">When <c>true</c> (the default), writes a column header row. Set to <c>false</c> to produce a data-only blob.</param>
     /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the blob content.</param>
     /// <param name="encodingHeaderOverride">
@@ -104,6 +113,7 @@ public interface IFileExportServices<T, C>
         string delimiter = ",",
         bool archiveExistingBlob = false,
         string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null);
