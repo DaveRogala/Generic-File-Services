@@ -19,12 +19,19 @@ public interface IFileWriterServices
     /// <param name="records">Data records to serialise.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the file.</param>
+    /// <param name="encodingHeaderOverride">
+    /// Overrides the encoding string written when <paramref name="writeEncodingHeader"/> is <c>true</c>.
+    /// When <c>null</c>, defaults to <see cref="Encoding.WebName"/> (e.g. <c>"utf-8"</c>).
+    /// </param>
     void WriteToFile<T>(
         string basePath,
         string fileName,
         IEnumerable<T> records,
         Encoding encoding,
-        string delimiter = ",");
+        string delimiter = ",",
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null);
 
     /// <summary>
     /// Serialises <paramref name="records"/> and uploads the result as a blob to
@@ -38,13 +45,20 @@ public interface IFileWriterServices
     /// <param name="records">Data records to serialise.</param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="writeEncodingHeader">When <c>true</c>, writes the encoding as the first line of the blob content.</param>
+    /// <param name="encodingHeaderOverride">
+    /// Overrides the encoding string written when <paramref name="writeEncodingHeader"/> is <c>true</c>.
+    /// When <c>null</c>, defaults to <see cref="Encoding.WebName"/> (e.g. <c>"utf-8"</c>).
+    /// </param>
     Task WriteToBlobAsync<T>(
         string blobConnectionString,
         string containerName,
         string blobPath,
         IEnumerable<T> records,
         Encoding encoding,
-        string delimiter = ",");
+        string delimiter = ",",
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null);
 
     /// <summary>
     /// If a file named <paramref name="fileName"/> already exists in <paramref name="basePath"/>,

@@ -17,11 +17,15 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         string fileName,
         IEnumerable<T> records,
         Encoding encoding,
-        string delimiter = ",")
+        string delimiter = ",",
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
     {
         var path = Path.Combine(basePath, fileName);
         _logger.LogInformation("Writing export file {FileName} to {BasePath}", fileName, basePath);
         using var writer = new StreamWriter(path, append: false, encoding);
+        if (writeEncodingHeader)
+            writer.WriteLine(encodingHeaderOverride ?? encoding.WebName);
         using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = delimiter });
         csv.WriteRecords(records);
     }
@@ -33,7 +37,9 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         string blobPath,
         IEnumerable<T> records,
         Encoding encoding,
-        string delimiter = ",")
+        string delimiter = ",",
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
     {
         _logger.LogInformation("Writing export blob {BlobPath} to container {ContainerName}", blobPath, containerName);
         var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
@@ -41,6 +47,8 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         using var stream = new MemoryStream();
         await using (var writer = new StreamWriter(stream, encoding, leaveOpen: true))
         {
+            if (writeEncodingHeader)
+                await writer.WriteLineAsync(encodingHeaderOverride ?? encoding.WebName);
             using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = delimiter });
             csv.WriteRecords(records);
         }

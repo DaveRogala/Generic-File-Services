@@ -123,6 +123,51 @@ public class FileWriterServicesTests : IDisposable
         Assert.Equal(0xBF, bytes[2]);
     }
 
+    // ── WriteToFile — encoding header ───────────────────────────────────────
+
+    [Fact]
+    public void WriteToFile_DoesNotWriteEncodingHeader_ByDefault()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false));
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Name,Value", lines[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesEncodingWebName_AsFirstLine_WhenFlagTrue()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            writeEncodingHeader: true);
+
+        Assert.Equal("utf-8", ReadLines("out.csv")[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesEncodingHeaderOverride_AsFirstLine_WhenProvided()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            writeEncodingHeader: true, encodingHeaderOverride: "windows-1252");
+
+        Assert.Equal("windows-1252", ReadLines("out.csv")[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesCsvHeaderOnSecondLine_WhenEncodingHeaderEnabled()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            writeEncodingHeader: true);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("utf-8", lines[0]);
+        Assert.Equal("Name,Value", lines[1]);
+        Assert.Equal("Alice,1", lines[2]);
+    }
+
     // ── ArchiveExistingFile — no-op ──────────────────────────────────────────
 
     [Fact]
@@ -305,6 +350,59 @@ public class FileWriterServicesTests : IDisposable
 
         Assert.Contains("Alice,1", captured);
         Assert.Contains("Bob,2", captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_DoesNotWriteEncodingHeader_ByDefault()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false));
+
+        Assert.StartsWith("Name,Value", captured.TrimStart('\r', '\n', '﻿'));
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_WritesEncodingWebName_AsFirstLine_WhenFlagTrue()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            writeEncodingHeader: true);
+
+        Assert.StartsWith("utf-8", captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_WritesEncodingHeaderOverride_AsFirstLine_WhenProvided()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            writeEncodingHeader: true, encodingHeaderOverride: "windows-1252");
+
+        Assert.StartsWith("windows-1252", captured);
     }
 
     // ── ArchiveExistingBlobAsync ──────────────────────────────────────────────
