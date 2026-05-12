@@ -353,6 +353,8 @@ List<string> errors = await exporter.ExportToFileAsync(
     encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 ```
 
+> **SQL injection note:** Pass the interpolated string literal directly to `SqlQuery` / `FromSql` — do **not** pre-evaluate it to a plain `string` variable first. EF Core intercepts the `FormattableString` and binds each `{value}` as a `DbParameter`. If you assign `var sql = $"...{categoryId}..."` and then pass `sql`, EF Core receives a plain string and cannot parameterise it, making the query vulnerable.
+
 **Archive an existing file before overwriting:**
 
 When `archiveExistingFile: true`, if the target file already exists it is timestamped and moved to the archive directory before the new file is written. The archive directory is created automatically.
