@@ -415,6 +415,7 @@ Task<List<string>> ExportToFileAsync(
     string delimiter              = ",",
     bool archiveExistingFile      = false,
     string? archivePath           = null,
+    bool writeHeader              = true,
     bool writeEncodingHeader      = false,
     string? encodingHeaderOverride = null)
 ```
@@ -431,6 +432,7 @@ Task<List<string>> ExportToBlobAsync(
     string delimiter              = ",",
     bool archiveExistingBlob      = false,
     string? archivePath           = null,
+    bool writeHeader              = true,
     bool writeEncodingHeader      = false,
     string? encodingHeaderOverride = null)
 ```
@@ -450,6 +452,7 @@ Task<List<string>> ExportToBlobAsync(
 | `archiveExistingFile` | `false` | Move an existing **local** file at the target path to the archive directory before writing |
 | `archiveExistingBlob` | `false` | Copy an existing **blob** at the target path to the archive path, then delete it, before uploading |
 | `archivePath` | `null` | Archive location. For files: absolute paths used as-is; relative paths resolved relative to `basePath`; `null` defaults to `archive` sub-folder of `basePath`. For blobs: blob path prefix within the same container; `null` defaults to `archive` folder inside the blob's current directory (e.g. `exports/archive`). |
+| `writeHeader` | `true` | When `false`, suppresses the CSV column header row. The output contains only data rows (and the encoding line, if `writeEncodingHeader` is also set). |
 | `writeEncodingHeader` | `false` | When `true`, writes the encoding as the first line of the output before the CSV header row |
 | `encodingHeaderOverride` | `null` | Custom string to write as the encoding line. When `null`, defaults to `Encoding.WebName` (e.g. `"utf-8"`, `"utf-16"`). Ignored unless `writeEncodingHeader` is `true`. |
 

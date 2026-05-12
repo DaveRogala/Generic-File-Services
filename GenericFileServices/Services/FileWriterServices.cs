@@ -18,6 +18,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
     {
@@ -26,7 +27,11 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         using var writer = new StreamWriter(path, append: false, encoding);
         if (writeEncodingHeader)
             writer.WriteLine(encodingHeaderOverride ?? encoding.WebName);
-        using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = delimiter });
+        using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            Delimiter = delimiter,
+            HasHeaderRecord = writeHeader
+        });
         csv.WriteRecords(records);
     }
 
@@ -38,6 +43,7 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         IEnumerable<T> records,
         Encoding encoding,
         string delimiter = ",",
+        bool writeHeader = true,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null)
     {
@@ -49,7 +55,11 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         {
             if (writeEncodingHeader)
                 await writer.WriteLineAsync(encodingHeaderOverride ?? encoding.WebName);
-            using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = delimiter });
+            using var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                Delimiter = delimiter,
+                HasHeaderRecord = writeHeader
+            });
             csv.WriteRecords(records);
         }
         stream.Position = 0;

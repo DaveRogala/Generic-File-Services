@@ -123,6 +123,55 @@ public class FileWriterServicesTests : IDisposable
         Assert.Equal(0xBF, bytes[2]);
     }
 
+    // ── WriteToFile — write header ──────────────────────────────────────────
+
+    [Fact]
+    public void WriteToFile_WritesHeaderRow_ByDefault()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false));
+
+        Assert.Equal("Name,Value", ReadLines("out.csv")[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_DoesNotWriteHeaderRow_WhenFlagFalse()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            writeHeader: false);
+
+        var lines = ReadLines("out.csv");
+        Assert.Single(lines);
+        Assert.Equal("Alice,1", lines[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesOnlyDataRows_WhenMultipleRecordsAndHeaderSuppressed()
+    {
+        var records = new[] { new ExportTestDto("Alice", 1), new ExportTestDto("Bob", 2) };
+        _sut.WriteToFile(_tempDir, "out.csv", records, new UTF8Encoding(false),
+            writeHeader: false);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("Alice,1", lines[0]);
+        Assert.Equal("Bob,2", lines[1]);
+    }
+
+    [Fact]
+    public void WriteToFile_WritesEncodingLineButNoColumnHeader_WhenBothFlagsSet()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            writeHeader: false, writeEncodingHeader: true);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("utf-8", lines[0]);
+        Assert.Equal("Alice,1", lines[1]);
+    }
+
     // ── WriteToFile — encoding header ───────────────────────────────────────
 
     [Fact]
@@ -350,6 +399,47 @@ public class FileWriterServicesTests : IDisposable
 
         Assert.Contains("Alice,1", captured);
         Assert.Contains("Bob,2", captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_DoesNotWriteHeaderRow_WhenFlagFalse()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            writeHeader: false);
+
+        var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Single(lines);
+        Assert.Contains("Alice,1", lines[0]);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_WritesEncodingLineButNoColumnHeader_WhenBothFlagsSet()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false),
+            writeHeader: false, writeEncodingHeader: true);
+
+        var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        Assert.Equal("utf-8", lines[0].Trim());
+        Assert.Contains("Alice,1", lines[1]);
     }
 
     [Fact]

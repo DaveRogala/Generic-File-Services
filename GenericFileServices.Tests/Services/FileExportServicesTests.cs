@@ -28,7 +28,7 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         _writerMock
@@ -78,7 +78,7 @@ public class FileExportServicesTests
             BasePath, FileName,
             It.IsAny<IEnumerable<ExportTestDto>>(),
             Encoding.UTF8, ",",
-            It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -91,9 +91,9 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, string?>(
-                (_, _, records, _, _, _, _) => captured = records.ToList());
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, bool, string?>(
+                (_, _, records, _, _, _, _, _) => captured = records.ToList());
 
         await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("Alice", "Bob"), Encoding.UTF8);
 
@@ -112,7 +112,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), "\t",
-            It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -125,9 +125,9 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, string?>(
-                (_, _, records, _, _, _, _) => captured = records.ToList());
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, bool, string?>(
+                (_, _, records, _, _, _, _, _) => captured = records.ToList());
 
         var errors = await _sut.ExportToFileAsync(BasePath, FileName, DataProvider(), Encoding.UTF8);
 
@@ -158,7 +158,7 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
             .Throws(new IOException("disk full"));
 
         var errors = await _sut.ExportToFileAsync(
@@ -180,7 +180,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Never);
     }
 
@@ -228,9 +228,9 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, string?>(
-                (_, _, _, _, _, _, _) => callOrder.Add("write"));
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, bool, string?>(
+                (_, _, _, _, _, _, _, _) => callOrder.Add("write"));
 
         await _sut.ExportToFileAsync(
             BasePath, FileName, DataProvider("X"), Encoding.UTF8,
@@ -298,7 +298,7 @@ public class FileExportServicesTests
             ConnStr, Container, BlobPath,
             It.IsAny<IEnumerable<ExportTestDto>>(),
             Encoding.UTF8, ",",
-            It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -311,9 +311,9 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, string?>(
-                (_, _, _, records, _, _, _, _) => captured = records.ToList())
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, bool, string?>(
+                (_, _, _, records, _, _, _, _, _) => captured = records.ToList())
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -348,7 +348,7 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
             .ThrowsAsync(new IOException("upload failed"));
 
         var errors = await _sut.ExportToBlobAsync(
@@ -404,9 +404,9 @@ public class FileExportServicesTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, string?>(
-                (_, _, _, _, _, _, _, _) => callOrder.Add("write"))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, bool, bool, string?>(
+                (_, _, _, _, _, _, _, _, _) => callOrder.Add("write"))
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -443,7 +443,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            false, null),
+            It.IsAny<bool>(), false, null),
             Times.Once);
     }
 
@@ -458,7 +458,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            true, null),
+            It.IsAny<bool>(), true, null),
             Times.Once);
     }
 
@@ -473,7 +473,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            true, "windows-1252"),
+            It.IsAny<bool>(), true, "windows-1252"),
             Times.Once);
     }
 
@@ -488,7 +488,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            false, null),
+            It.IsAny<bool>(), false, null),
             Times.Once);
     }
 
@@ -503,7 +503,7 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            true, null),
+            It.IsAny<bool>(), true, null),
             Times.Once);
     }
 
@@ -518,7 +518,67 @@ public class FileExportServicesTests
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
-            true, "windows-1252"),
+            It.IsAny<bool>(), true, "windows-1252"),
+            Times.Once);
+    }
+
+    // ── ExportToFileAsync — write header ─────────────────────────────────────
+
+    [Fact]
+    public async Task ExportToFileAsync_ForwardsWriteHeader_True_ByDefault()
+    {
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("X"), Encoding.UTF8);
+
+        _writerMock.Verify(w => w.WriteToFile(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
+            It.IsAny<Encoding>(), It.IsAny<string>(),
+            true, It.IsAny<bool>(), It.IsAny<string?>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ForwardsWriteHeader_False_WhenFlagUnset()
+    {
+        await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8,
+            writeHeader: false);
+
+        _writerMock.Verify(w => w.WriteToFile(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
+            It.IsAny<Encoding>(), It.IsAny<string>(),
+            false, It.IsAny<bool>(), It.IsAny<string?>()),
+            Times.Once);
+    }
+
+    // ── ExportToBlobAsync — write header ──────────────────────────────────────
+
+    [Fact]
+    public async Task ExportToBlobAsync_ForwardsWriteHeader_True_ByDefault()
+    {
+        await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8);
+
+        _writerMock.Verify(w => w.WriteToBlobAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
+            It.IsAny<Encoding>(), It.IsAny<string>(),
+            true, It.IsAny<bool>(), It.IsAny<string?>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ForwardsWriteHeader_False_WhenFlagUnset()
+    {
+        await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
+            writeHeader: false);
+
+        _writerMock.Verify(w => w.WriteToBlobAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<IEnumerable<ExportTestDto>>(),
+            It.IsAny<Encoding>(), It.IsAny<string>(),
+            false, It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 }
