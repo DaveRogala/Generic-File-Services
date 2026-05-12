@@ -71,4 +71,46 @@ public class FileWriterServices(ILogger<FileWriterServices> logger) : IFileWrite
         File.Move(sourcePath, destPath);
         _logger.LogInformation("Archived {FileName} to {DestPath}", fileName, destPath);
     }
+
+    /// <inheritdoc/>
+    public async Task ArchiveExistingBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        string? archivePath = null)
+    {
+        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
+        var blobClient = containerClient.GetBlobClient(blobPath);
+
+        if (!await blobClient.ExistsAsync())
+            return;
+
+        var timestamp = DateTime.UtcNow.ToString(TimestampFormat);
+        var name = Path.GetFileNameWithoutExtension(blobPath);
+        var ext = Path.GetExtension(blobPath);
+        var archivedFileName = $"{name}_{timestamp}{ext}";
+
+        string resolvedArchiveDir;
+        if (archivePath is null)
+        {
+            var lastSlash = blobPath.LastIndexOf('/');
+            var blobDir = lastSlash >= 0 ? blobPath[..lastSlash] : "";
+            resolvedArchiveDir = blobDir.Length > 0 ? $"{blobDir}/archive" : "archive";
+        }
+        else
+        {
+            resolvedArchiveDir = archivePath.TrimEnd('/');
+        }
+
+        var archiveBlobPath = $"{resolvedArchiveDir}/{archivedFileName}";
+        var archiveBlobClient = containerClient.GetBlobClient(archiveBlobPath);
+
+        using var stream = new MemoryStream();
+        await blobClient.DownloadToAsync(stream);
+        stream.Position = 0;
+        await archiveBlobClient.UploadAsync(stream, overwrite: true);
+        await blobClient.DeleteAsync();
+
+        _logger.LogInformation("Archived blob {BlobPath} to {ArchiveBlobPath}", blobPath, archiveBlobPath);
+    }
 }

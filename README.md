@@ -385,6 +385,19 @@ List<string> errors = await exporter.ExportToBlobAsync(
     encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 ```
 
+**Archive an existing blob before overwriting:**
+
+When `archiveExistingBlob: true`, if the target blob already exists it is copied to the archive path with a timestamp appended to the file stem, and the original is deleted before the new blob is uploaded. The archive path is a blob path prefix within the same container.
+
+```csharp
+// Default: exports/archive/products_20260512143022123.csv
+await exporter.ExportToBlobAsync(..., archiveExistingBlob: true);
+
+// Custom archive path
+await exporter.ExportToBlobAsync(..., archiveExistingBlob: true,
+    archivePath: "archive/products");
+```
+
 ---
 
 ## ExportToFileAsync / ExportToBlobAsync reference
@@ -413,7 +426,9 @@ Task<List<string>> ExportToBlobAsync(
     string blobPath,
     Func<Task<List<T>>> dataProvider,
     Encoding encoding,
-    string delimiter = ",")
+    string delimiter           = ",",
+    bool archiveExistingBlob   = false,
+    string? archivePath        = null)
 ```
 
 ### Parameter reference
@@ -428,8 +443,9 @@ Task<List<string>> ExportToBlobAsync(
 | `dataProvider` | — | Async delegate that returns `List<T>` |
 | `encoding` | — | Character encoding. UTF-8 without BOM recommended. |
 | `delimiter` | `","` | Column delimiter |
-| `archiveExistingFile` | `false` | Move an existing file at the target path to the archive directory before writing |
-| `archivePath` | `null` | Archive directory. Absolute paths used as-is; relative paths resolved relative to `basePath`. `null` defaults to `archive` sub-folder of `basePath`. |
+| `archiveExistingFile` | `false` | Move an existing **local** file at the target path to the archive directory before writing |
+| `archiveExistingBlob` | `false` | Copy an existing **blob** at the target path to the archive path, then delete it, before uploading |
+| `archivePath` | `null` | Archive location. For files: absolute paths used as-is; relative paths resolved relative to `basePath`; `null` defaults to `archive` sub-folder of `basePath`. For blobs: blob path prefix within the same container; `null` defaults to `archive` folder inside the blob's current directory (e.g. `exports/archive`). |
 
 ### Column mapping
 

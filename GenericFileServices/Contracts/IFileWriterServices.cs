@@ -60,4 +60,19 @@ public interface IFileWriterServices
     /// When <c>null</c>, defaults to an <c>archive</c> sub-folder of <paramref name="basePath"/>.
     /// </param>
     void ArchiveExistingFile(string basePath, string fileName, string? archivePath = null);
+
+    /// <summary>
+    /// If a blob at <paramref name="blobPath"/> exists in <paramref name="containerName"/>,
+    /// copies it to the archive path with a UTC timestamp appended to the file stem, then
+    /// deletes the original. Does nothing when the blob does not exist.
+    /// </summary>
+    /// <param name="blobConnectionString">Azure Storage connection string.</param>
+    /// <param name="containerName">Container that holds the blob to archive.</param>
+    /// <param name="blobPath">Current blob path, e.g. <c>"exports/orders.csv"</c>.</param>
+    /// <param name="archivePath">
+    /// Blob path prefix for the archived blob.
+    /// When <c>null</c>, defaults to an <c>archive</c> folder inside the blob's current directory,
+    /// e.g. <c>"exports/archive"</c>.
+    /// </param>
+    Task ArchiveExistingBlobAsync(string blobConnectionString, string containerName, string blobPath, string? archivePath = null);
 }

@@ -71,6 +71,14 @@ public interface IFileExportServices<T, C>
     /// </param>
     /// <param name="encoding">Character encoding. Defaults to UTF-8 without BOM when not specified.</param>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
+    /// <param name="archiveExistingBlob">
+    /// When <c>true</c> and a blob at <paramref name="blobPath"/> already exists, it is
+    /// timestamped and moved to the archive path before the new blob is uploaded.
+    /// </param>
+    /// <param name="archivePath">
+    /// Blob path prefix for the archived blob, used when <paramref name="archiveExistingBlob"/> is <c>true</c>.
+    /// When <c>null</c>, defaults to an <c>archive</c> folder inside the blob's current directory.
+    /// </param>
     /// <returns>A list of error messages. An empty list indicates a successful export.</returns>
     Task<List<string>> ExportToBlobAsync(
         string blobConnectionString,
@@ -78,5 +86,7 @@ public interface IFileExportServices<T, C>
         string blobPath,
         Func<Task<List<T>>> dataProvider,
         Encoding encoding,
-        string delimiter = ",");
+        string delimiter = ",",
+        bool archiveExistingBlob = false,
+        string? archivePath = null);
 }

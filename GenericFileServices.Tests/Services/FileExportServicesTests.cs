@@ -29,6 +29,11 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
+
+        _writerMock
+            .Setup(w => w.ArchiveExistingBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Returns(Task.CompletedTask);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -340,5 +345,78 @@ public class FileExportServicesTests
 
         Assert.Single(errors);
         Assert.Contains("upload failed", errors[0]);
+    }
+
+    // ── ExportToBlobAsync — archive existing blob ─────────────────────────────
+
+    [Fact]
+    public async Task ExportToBlobAsync_DoesNotCallArchive_WhenFlagFalse()
+    {
+        await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8);
+
+        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_CallsArchive_WhenFlagTrue()
+    {
+        await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
+            archiveExistingBlob: true);
+
+        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ForwardsArchivePath_ToWriter()
+    {
+        await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
+            archiveExistingBlob: true, archivePath: "exports/archive");
+
+        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, "exports/archive"), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ArchivesBeforeWriting()
+    {
+        var callOrder = new List<string>();
+        _writerMock
+            .Setup(w => w.ArchiveExistingBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback(() => callOrder.Add("archive"))
+            .Returns(Task.CompletedTask);
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string>(
+                (_, _, _, _, _, _) => callOrder.Add("write"))
+            .Returns(Task.CompletedTask);
+
+        await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
+            archiveExistingBlob: true);
+
+        Assert.Equal(["archive", "write"], callOrder);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ReturnsErrors_WhenArchiveThrows()
+    {
+        _writerMock
+            .Setup(w => w.ArchiveExistingBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .ThrowsAsync(new InvalidOperationException("copy failed"));
+
+        var errors = await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
+            archiveExistingBlob: true);
+
+        Assert.Single(errors);
+        Assert.Contains("copy failed", errors[0]);
     }
 }

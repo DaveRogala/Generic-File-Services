@@ -55,7 +55,9 @@ public class FileExportServices<T, C>(
         string blobPath,
         Func<Task<List<T>>> dataProvider,
         Encoding encoding,
-        string delimiter = ",")
+        string delimiter = ",",
+        bool archiveExistingBlob = false,
+        string? archivePath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(blobConnectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(containerName);
@@ -64,6 +66,9 @@ public class FileExportServices<T, C>(
         var errors = new List<string>();
         try
         {
+            if (archiveExistingBlob)
+                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath);
+
             var data = await dataProvider();
             await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter);
         }
