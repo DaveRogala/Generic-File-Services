@@ -200,7 +200,35 @@ Task<List<string>> ProcessFileAsync(
 | `rowsToSkip` | `0` | Number of leading rows to skip before parsing (e.g. metadata headers) |
 | `fixUnescapedQuotes` | `false` | Attempt to repair unescaped quote characters in CSV fields |
 
-### Convenience overloads
+### `FileImportOptions` overloads (preferred)
+
+Pass a `FileImportOptions` record instead of individual boolean parameters. All properties have sensible defaults — only set what you need:
+
+```csharp
+// Simplest — defaults for everything
+await importer.ProcessFileAsync(basePath, fileNamePattern, FileImportOptions.Default);
+
+// Tab-delimited, hard delete, skip one metadata row
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    Delimiter = "\t",
+    HardDelete = true,
+    RowsToSkip = 1
+});
+
+// Process multiple files; don't archive on success
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    MultipleFiles = true,
+    ArchiveIfSuccess = false
+});
+```
+
+`FileImportOptions` properties mirror the parameters of the master overload — see the parameter reference table above.
+
+### Convenience overloads (deprecated)
+
+The individual boolean-parameter overloads still work but are marked `[Obsolete]`. Prefer the `FileImportOptions` form above.
 
 ```csharp
 // Simplest — defaults for everything
@@ -208,9 +236,6 @@ ProcessFileAsync(basePath, fileNamePattern)
 
 // Skip N leading rows
 ProcessFileAsync(basePath, fileNamePattern, rowsToSkip: 3)
-
-// Skip rows and fix unescaped quotes
-ProcessFileAsync(basePath, fileNamePattern, rowsToSkip: 1, fixUnescapedQuotes: true)
 
 // Hard delete
 ProcessFileAsync(basePath, fileNamePattern, hardDelete: true)
@@ -372,7 +397,7 @@ await exporter.ExportToFileAsync(..., archiveExistingFile: true,
     archivePath: "old");
 ```
 
-The archived file is named `<stem>_<yyyyMMddHHmmssfff><ext>` — for example, `products_20260511143022123.csv`.
+The archived file is named `<stem>_<yyyyMMddHHmmssfffffff><ext>` — for example, `products_202605111430221234567.csv`.
 
 **Azure Blob Storage:**
 
@@ -600,7 +625,7 @@ public class BaseObject
 
 `DateDeletedUtc` is indexed automatically. Soft-deletes set this field; hard-deletes remove the row.
 
-Export data types do not need to extend `BaseObject` — the `T` in `IFileExportServices<T, C>` is constrained only to `class`.
+Export data types do not need to extend `BaseObject` — the `T` in `IFileExportServices<T>` is constrained only to `class`. The `IFileExportServices<T, C>` form (with an `AppDbContext` type parameter) also exists for backward compatibility, but new code should inject `IFileExportServices<T>` directly.
 
 ---
 
@@ -609,8 +634,11 @@ Export data types do not need to extend `BaseObject` — the `T` in `IFileExport
 Override `FileReaderServices<U>` if you need custom parsing logic (e.g. fixed-width files):
 
 ```csharp
-public class MyFileReaderServices(IFileServices fileServices, ILogger<MyFileReaderServices> logger)
-    : FileReaderServices<MyDto>(fileServices, logger)
+public class MyFileReaderServices(
+    IFileServices fileServices,
+    ILogger<MyFileReaderServices> logger,
+    IBlobClientFactory blobClientFactory)
+    : FileReaderServices<MyDto>(fileServices, logger, blobClientFactory)
 {
     public override List<FileResults<MyDto>> ReadFromFile(
         string basePath, string fileNamePattern, Encoding encoding,
