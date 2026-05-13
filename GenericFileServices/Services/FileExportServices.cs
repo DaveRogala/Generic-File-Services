@@ -53,6 +53,39 @@ public class FileExportServices<T, C>(
     }
 
     /// <inheritdoc/>
+    public async Task<List<string>> ExportToFileAsync(
+        string basePath,
+        string fileName,
+        Func<Task<List<T>>> dataProvider,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        bool archiveExistingFile = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(basePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        var errors = new List<string>();
+        try
+        {
+            if (archiveExistingFile)
+                _fileWriterServices.ArchiveExistingFile(basePath, fileName, archivePath);
+
+            var data = await dataProvider();
+            _fileWriterServices.WriteToFile(basePath, fileName, data, encoding, csvConfiguration, metadataHeader, writeEncodingHeader, encodingHeaderOverride);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting {FileName} to {BasePath}", fileName, basePath);
+            errors.Add($"Export of {fileName} failed: {ex.Message}");
+        }
+        return errors;
+    }
+
+    /// <inheritdoc/>
     public async Task<List<string>> ExportToBlobAsync(
         string blobConnectionString,
         string containerName,
@@ -79,6 +112,41 @@ public class FileExportServices<T, C>(
 
             var data = await dataProvider();
             await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting to blob {BlobPath}", blobPath);
+            errors.Add($"Export to blob {blobPath} failed: {ex.Message}");
+        }
+        return errors;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<string>> ExportToBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        Func<Task<List<T>>> dataProvider,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        bool archiveExistingBlob = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(blobConnectionString);
+        ArgumentException.ThrowIfNullOrWhiteSpace(containerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(blobPath);
+
+        var errors = new List<string>();
+        try
+        {
+            if (archiveExistingBlob)
+                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath);
+
+            var data = await dataProvider();
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, csvConfiguration, metadataHeader, writeEncodingHeader, encodingHeaderOverride);
         }
         catch (Exception ex)
         {

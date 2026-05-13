@@ -685,4 +685,130 @@ public class FileExportServicesTests
         Assert.NotNull(captured);
         Assert.Same(metadata, captured);
     }
+
+    // ── ExportToFileAsync (CsvConfiguration overload) ────────────────────────
+
+    [Fact]
+    public async Task ExportToFileAsync_CsvConfigOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+
+        var errors = await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("Alice"), Encoding.UTF8, config);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_CsvConfigOverload_PassesCsvConfiguration_ToWriter()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        CsvConfiguration? captured = null;
+
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, CsvConfiguration, IReadOnlyDictionary<int, string>?, bool, string?>(
+                (_, _, _, _, cfg, _, _, _) => captured = cfg);
+
+        await _sut.ExportToFileAsync(BasePath, FileName, DataProvider("X"), Encoding.UTF8, config);
+
+        Assert.Same(config, captured);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_CsvConfigOverload_ReturnsErrors_WhenWriterThrows()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>()))
+            .Throws(new IOException("disk full"));
+
+        var errors = await _sut.ExportToFileAsync(
+            BasePath, FileName, DataProvider("X"), Encoding.UTF8, config);
+
+        Assert.Single(errors);
+        Assert.Contains("disk full", errors[0]);
+    }
+
+    // ── ExportToBlobAsync (CsvConfiguration overload) ─────────────────────────
+
+    [Fact]
+    public async Task ExportToBlobAsync_CsvConfigOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>()))
+            .Returns(Task.CompletedTask);
+
+        var errors = await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("Alice"), Encoding.UTF8, config);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_CsvConfigOverload_PassesCsvConfiguration_ToWriter()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        CsvConfiguration? captured = null;
+
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, CsvConfiguration, IReadOnlyDictionary<int, string>?, bool, string?>(
+                (_, _, _, _, _, cfg, _, _, _) => captured = cfg)
+            .Returns(Task.CompletedTask);
+
+        await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8, config);
+
+        Assert.Same(config, captured);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_CsvConfigOverload_ReturnsErrors_WhenWriterThrows()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>()))
+            .ThrowsAsync(new IOException("upload failed"));
+
+        var errors = await _sut.ExportToBlobAsync(
+            ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8, config);
+
+        Assert.Single(errors);
+        Assert.Contains("upload failed", errors[0]);
+    }
 }

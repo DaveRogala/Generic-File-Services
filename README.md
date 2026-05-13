@@ -422,6 +422,31 @@ await exporter.ExportToFileAsync(
 
 Output line order: metadata lines → encoding line (if `writeEncodingHeader: true`) → CSV column header → data rows.
 
+**Full CsvHelper control (`CsvConfiguration` overload):**
+
+When the convenience parameters (`delimiter`, `writeHeader`) are not enough — for example, to force quoting on specific columns — pass a `CsvConfiguration` directly. This overload omits `delimiter` and `writeHeader`; set those on the configuration object instead.
+
+```csharp
+using CsvHelper.Configuration;
+using System.Globalization;
+
+var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+{
+    Delimiter = ",",
+    HasHeaderRecord = true,
+    ShouldQuote = args => args.MemberMapData?.Member?.Name == nameof(ProductExportDto.Sku)
+};
+
+await exporter.ExportToFileAsync(
+    basePath: @"C:\exports",
+    fileName: "products.csv",
+    dataProvider: ...,
+    encoding: new UTF8Encoding(false),
+    csvConfiguration: config);
+```
+
+The same overload is available on `ExportToBlobAsync`. All other optional parameters (`archiveExistingFile`, `archivePath`, `metadataHeader`, `writeEncodingHeader`, `encodingHeaderOverride`) are still available in both overloads.
+
 ---
 
 ## ExportToFileAsync / ExportToBlobAsync reference
@@ -463,6 +488,39 @@ Task<List<string>> ExportToBlobAsync(
     string? encodingHeaderOverride             = null)
 ```
 
+### CsvConfiguration overloads
+
+When you need full control over CsvHelper — custom quoting, class maps, culture settings, etc. — use the `CsvConfiguration` overloads. These replace `delimiter` and `writeHeader` with a single `CsvConfiguration` parameter; all other parameters remain available.
+
+```csharp
+// Local file system
+Task<List<string>> ExportToFileAsync(
+    string basePath,
+    string fileName,
+    Func<Task<List<T>>> dataProvider,
+    Encoding encoding,
+    CsvConfiguration csvConfiguration,
+    bool archiveExistingFile                   = false,
+    string? archivePath                        = null,
+    IReadOnlyDictionary<int, string>? metadataHeader = null,
+    bool writeEncodingHeader                   = false,
+    string? encodingHeaderOverride             = null)
+
+// Azure Blob Storage
+Task<List<string>> ExportToBlobAsync(
+    string blobConnectionString,
+    string containerName,
+    string blobPath,
+    Func<Task<List<T>>> dataProvider,
+    Encoding encoding,
+    CsvConfiguration csvConfiguration,
+    bool archiveExistingBlob                   = false,
+    string? archivePath                        = null,
+    IReadOnlyDictionary<int, string>? metadataHeader = null,
+    bool writeEncodingHeader                   = false,
+    string? encodingHeaderOverride             = null)
+```
+
 ### Parameter reference
 
 | Parameter | Default | Description |
@@ -474,12 +532,13 @@ Task<List<string>> ExportToBlobAsync(
 | `blobPath` | — | Full blob path, e.g. `"exports/products_20260101.csv"`. Overwrites if exists. |
 | `dataProvider` | — | Async delegate that returns `List<T>` |
 | `encoding` | — | Character encoding. UTF-8 without BOM recommended. |
-| `delimiter` | `","` | Column delimiter |
+| `delimiter` | `","` | Column delimiter *(convenience overload only)* |
+| `csvConfiguration` | — | Full CsvHelper configuration *(CsvConfiguration overload only)*. Caller sets `Delimiter`, `HasHeaderRecord`, `ShouldQuote`, etc. |
 | `archiveExistingFile` | `false` | Move an existing **local** file at the target path to the archive directory before writing |
 | `archiveExistingBlob` | `false` | Copy an existing **blob** at the target path to the archive path, then delete it, before uploading |
 | `archivePath` | `null` | Archive location. For files: absolute paths used as-is; relative paths resolved relative to `basePath`; `null` defaults to `archive` sub-folder of `basePath`. For blobs: blob path prefix within the same container; `null` defaults to `archive` folder inside the blob's current directory (e.g. `exports/archive`). |
 | `metadataHeader` | `null` | Optional lines written at the top of the file before the encoding line and CSV column header. Keys determine the output order (ascending); gaps in the key sequence are ignored. When `null`, no metadata lines are written. |
-| `writeHeader` | `true` | When `false`, suppresses the CSV column header row. The output contains only data rows (and the encoding line and metadata, if those flags are set). |
+| `writeHeader` | `true` | When `false`, suppresses the CSV column header row. *(convenience overload only — use `HasHeaderRecord` on the configuration object in the CsvConfiguration overload)* |
 | `writeEncodingHeader` | `false` | When `true`, writes the encoding as a line after any metadata and before the CSV header row |
 | `encodingHeaderOverride` | `null` | Custom string to write as the encoding line. When `null`, defaults to `Encoding.WebName` (e.g. `"utf-8"`, `"utf-16"`). Ignored unless `writeEncodingHeader` is `true`. |
 

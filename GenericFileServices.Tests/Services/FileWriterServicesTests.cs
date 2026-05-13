@@ -743,4 +743,117 @@ public class FileWriterServicesTests : IDisposable
         Assert.Equal("utf-8", lines[1].Trim());
         Assert.Equal("Name,Value", lines[2].Trim());
     }
+
+    // ── WriteToFile (CsvConfiguration overload) ──────────────────────────────
+
+    [Fact]
+    public void WriteToFile_CsvConfigOverload_WritesDataRows()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        var records = new[] { new ExportTestDto("Alice", 1) };
+
+        _sut.WriteToFile(_tempDir, "out.csv", records, new UTF8Encoding(false), config);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Name,Value", lines[0]);
+        Assert.Equal("Alice,1", lines[1]);
+    }
+
+    [Fact]
+    public void WriteToFile_CsvConfigOverload_RespectsCustomDelimiter()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = "|" };
+        var records = new[] { new ExportTestDto("Alice", 1) };
+
+        _sut.WriteToFile(_tempDir, "out.psv", records, new UTF8Encoding(false), config);
+
+        var lines = ReadLines("out.psv");
+        Assert.Equal("Name|Value", lines[0]);
+        Assert.Equal("Alice|1", lines[1]);
+    }
+
+    [Fact]
+    public void WriteToFile_CsvConfigOverload_SuppressesHeader_WhenHasHeaderRecordFalse()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false };
+        var records = new[] { new ExportTestDto("Alice", 1) };
+
+        _sut.WriteToFile(_tempDir, "out.csv", records, new UTF8Encoding(false), config);
+
+        var lines = ReadLines("out.csv");
+        Assert.Single(lines);
+        Assert.Equal("Alice,1", lines[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_CsvConfigOverload_QuotesField_WhenShouldQuoteReturnsTrue()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            ShouldQuote = _ => true
+        };
+        var records = new[] { new ExportTestDto("Alice", 1) };
+
+        _sut.WriteToFile(_tempDir, "out.csv", records, new UTF8Encoding(false), config);
+
+        var lines = ReadLines("out.csv");
+        Assert.Contains("\"Alice\"", lines[1]);
+        Assert.Contains("\"1\"", lines[1]);
+    }
+
+    [Fact]
+    public void WriteToFile_CsvConfigOverload_WritesMetadataBeforeCsvContent()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        var records = new[] { new ExportTestDto("Alice", 1) };
+        var metadata = new Dictionary<int, string> { { 1, "Source: ERP" } };
+
+        _sut.WriteToFile(_tempDir, "out.csv", records, new UTF8Encoding(false), config,
+            metadataHeader: metadata);
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Source: ERP", lines[0]);
+        Assert.Equal("Name,Value", lines[1]);
+        Assert.Equal("Alice,1", lines[2]);
+    }
+
+    // ── WriteToBlobAsync (CsvConfiguration overload) ──────────────────────────
+
+    [Fact]
+    public async Task WriteToBlobAsync_CsvConfigOverload_WritesDataRows()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false), config);
+
+        Assert.Contains("Name,Value", captured);
+        Assert.Contains("Alice,1", captured);
+    }
+
+    [Fact]
+    public async Task WriteToBlobAsync_CsvConfigOverload_QuotesField_WhenShouldQuoteReturnsTrue()
+    {
+        var blobMock = new Mock<BlobClient>();
+        var captured = "";
+        _factoryMock.Setup(f => f.GetBlobClient(ConnStr, Container, BlobPath)).Returns(blobMock.Object);
+        blobMock
+            .Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
+            .Callback<Stream, bool, CancellationToken>((s, _, _) => { s.Position = 0; captured = new StreamReader(s).ReadToEnd(); })
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { ShouldQuote = _ => true };
+        await _sut.WriteToBlobAsync(ConnStr, Container, BlobPath,
+            new[] { new ExportTestDto("Alice", 1) }, new UTF8Encoding(false), config);
+
+        var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Contains("\"Alice\"", lines[1]);
+    }
 }

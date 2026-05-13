@@ -75,6 +75,59 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
     }
 
     /// <inheritdoc/>
+    public void WriteToFile<T>(
+        string basePath,
+        string fileName,
+        IEnumerable<T> records,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
+    {
+        var path = Path.Combine(basePath, fileName);
+        _logger.LogInformation("Writing export file {FileName} to {BasePath}", fileName, basePath);
+        using var writer = new StreamWriter(path, append: false, encoding);
+        if (metadataHeader is not null)
+            foreach (var kvp in metadataHeader.OrderBy(k => k.Key))
+                writer.WriteLine(kvp.Value);
+        if (writeEncodingHeader)
+            writer.WriteLine(encodingHeaderOverride ?? encoding.WebName);
+        using var csv = new CsvWriter(writer, csvConfiguration);
+        csv.WriteRecords(records);
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteToBlobAsync<T>(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        IEnumerable<T> records,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null)
+    {
+        _logger.LogInformation("Writing export blob {BlobPath} to container {ContainerName}", blobPath, containerName);
+        var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
+
+        using var stream = new MemoryStream();
+        await using (var writer = new StreamWriter(stream, encoding, leaveOpen: true))
+        {
+            if (metadataHeader is not null)
+                foreach (var kvp in metadataHeader.OrderBy(k => k.Key))
+                    await writer.WriteLineAsync(kvp.Value);
+            if (writeEncodingHeader)
+                await writer.WriteLineAsync(encodingHeaderOverride ?? encoding.WebName);
+            using var csv = new CsvWriter(writer, csvConfiguration);
+            csv.WriteRecords(records);
+        }
+        stream.Position = 0;
+        await blobClient.UploadAsync(stream, overwrite: true);
+    }
+
+    /// <inheritdoc/>
     public void ArchiveExistingFile(string basePath, string fileName, string? archivePath = null)
     {
         var sourcePath = Path.Combine(basePath, fileName);
