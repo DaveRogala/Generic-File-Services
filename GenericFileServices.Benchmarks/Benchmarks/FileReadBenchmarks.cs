@@ -29,7 +29,8 @@ public class FileReadBenchmarks
 
         _sut = new FileReaderServices<BenchDto>(
             new StubFileServices(data),
-            NullLogger<FileReaderServices<BenchDto>>.Instance);
+            NullLogger<FileReaderServices<BenchDto>>.Instance,
+            new GenericFileServices.Services.BlobClientFactory());
 
         _stream = new MemoryStream();
     }

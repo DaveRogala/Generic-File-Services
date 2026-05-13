@@ -158,7 +158,7 @@ public class FileImportServicesTests
     public async Task ProcessFileAsync_ForwardsHardDeleteTrue_ToUpdateDatabase()
     {
         SetupExistingEntities(new TestEntity { Name = "Gone" });
-        SetupReader(MakeResult("data.csv", []));
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "Replacement" }]));
 
         await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, hardDelete: true);
 
@@ -211,10 +211,10 @@ public class FileImportServicesTests
             Times.Once);
     }
 
-    // ── Multiple files: GetAllEntitiesAsync called once ──────────────────────
+    // ── Multiple files: GetAllEntitiesAsync reloaded per file ──────────────────
 
     [Fact]
-    public async Task ProcessFileAsync_CallsGetAllEntitiesOnce_EvenWithMultipleFiles()
+    public async Task ProcessFileAsync_ReloadsExistingEntities_ForEachFileWhenMultipleFiles()
     {
         SetupExistingEntities();
         _readerMock
@@ -229,7 +229,9 @@ public class FileImportServicesTests
 
         await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, multipleFiles: true);
 
-        _dbMock.Verify(d => d.GetAllEntitiesAsync(), Times.Once);
+        // A-2: existingEntities is reloaded before each file so subsequent files see
+        // entities written by earlier files.
+        _dbMock.Verify(d => d.GetAllEntitiesAsync(), Times.Exactly(2));
     }
 
     // ── Stream / blob overload ───────────────────────────────────────────────
@@ -289,4 +291,38 @@ public class FileImportServicesTests
             r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>()),
             Times.Once);
     }
+
+    // ── FileImportOptions overload (A-3) ────────────────────────────────────────
+
+    [Fact]
+    public async Task ProcessFileAsync_WithFileImportOptions_UsesOptionsValues()
+    {
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "Alice" }]));
+        var options = new FileImportOptions
+        {
+            Delimiter = "|",
+            ArchiveIfSuccess = false,
+            MultipleFiles = true,
+        };
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, options);
+
+        Assert.Empty(errors);
+        _readerMock.Verify(
+            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), "|", false, true, true, 0, false),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_WithFileImportOptionsDefault_MatchesDefaultBehavior()
+    {
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "Alice" }]));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, FileImportOptions.Default);
+
+        Assert.Empty(errors);
+    }
+
 }

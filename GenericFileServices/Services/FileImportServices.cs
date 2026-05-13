@@ -20,8 +20,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     private readonly IFileReaderServices<U> _fileReaderServices;
     private readonly ILogger<FileImportServices<T, U, C>> _logger;
 
-    private static readonly string TimestampFormat = "yyyyMMddHHmmssfff";
-    private static readonly string FileContainedErrors = "File contained errors";
+    private const string FileContainedErrors = "File contained errors";
 
     /// <summary>Initializes a new instance with the required collaborators.</summary>
     protected FileImportServices(
@@ -34,7 +33,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         _logger = logger;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
@@ -49,10 +48,10 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             {
                 List<string> errors = fileResult.Errors;
 
-                string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
+                string timeStamp = DateTime.UtcNow.ToString(Constants.TimestampFormat);
                 try
                 {
-                    if (fileResult.ObjectResults is not null)
+                    if (fileResult.ObjectResults is { Count: > 0 })
                     {
                         List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
 
@@ -87,7 +86,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
     {
         try
@@ -99,15 +98,15 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
 
             if (fileResults.Count == 0) return errors;
 
-            List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
-
             foreach (var fileResult in fileResults)
             {
-                string timeStamp = DateTime.UtcNow.ToString(TimestampFormat);
+                string timeStamp = DateTime.UtcNow.ToString(Constants.TimestampFormat);
                 try
                 {
-                    if (fileResult.ObjectResults is not null)
+                    if (fileResult.ObjectResults is { Count: > 0 })
                     {
+                        // Reload before each file so subsequent files see entities added/updated by earlier files.
+                        List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
                         await _databaseServices.UpdateDatabaseAsync(
                             GetAddEntities(existingEntities, fileResult.ObjectResults),
                             GetUpdateEntities(existingEntities, fileResult.ObjectResults),
@@ -159,61 +158,81 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of DTO keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
     public virtual List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos) => [];
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, FileImportOptions)"/>
+    public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, FileImportOptions options)
+    {
+        return await ProcessFileAsync(
+            basePath, fileNamePattern,
+            options.Encoding, options.Delimiter,
+            options.FirstLineContainsEncoding, options.FailIfNotFound, options.MultipleFiles,
+            options.ArchiveIfSuccess, options.HardDelete, options.RowsToSkip, options.FixUnescapedQuotes);
+    }
+
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, FileImportOptions)"/>
+    public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options)
+    {
+        return await ProcessFileAsync(
+            stream, blobConnectionString, containerName, filePath,
+            options.Encoding, options.Delimiter,
+            options.FirstLineContainsEncoding, options.FailIfNotFound, options.MultipleFiles,
+            options.ArchiveIfSuccess, options.HardDelete, options.RowsToSkip, options.FixUnescapedQuotes);
+    }
+
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool hardDelete)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool firstLineContainsEncoding, bool hardDelete)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool failIfNotFound, bool firstLineContainsEncoding, bool archiveIfSuccess)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound, multipleFiles: false, archiveIfSuccess);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool fixUnescapedQuotes, bool archiveIfSuccess = true)
     {
         return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes);

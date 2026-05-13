@@ -51,6 +51,7 @@ public static class FileServiceCollectionExtensions
     {
         services.AddScoped<IGenericRepository<T, M, int>, Repository<T, M>>();
         services.AddScoped<IFileServices, FileServices>();
+        services.AddSingleton<IBlobClientFactory, BlobClientFactory>();
         services.AddScoped<IFileReaderServices<U>, FileReaderServices<U>>();
         services.AddScoped<IDatabaseServices<T, M>, DatabaseServices<T, M>>();
         services.AddScoped<IFileImportServices<T, U, M>, F>();

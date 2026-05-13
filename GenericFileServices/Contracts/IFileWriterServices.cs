@@ -3,8 +3,8 @@ namespace GenericFileServices.Contracts;
 /// <summary>
 /// Writes delimited files to a local/network path or an Azure Blob Storage container
 /// using CsvHelper for serialisation. Column headers and field formatting are derived
-/// from the record or class type <typeparamref name="T"/> via CsvHelper's auto-map
-/// or a registered <c>ClassMap&lt;T&gt;</c>.
+/// from the record or class type via CsvHelper's auto-map
+/// or a registered <c>ClassMap</c>.
 /// </summary>
 public interface IFileWriterServices
 {

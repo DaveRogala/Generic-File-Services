@@ -4,6 +4,7 @@ using GenericFileServices.Models;
 using GenericFileServices.Services;
 using GenericFileServices.Tests.TestHelpers;
 using MagellanFileServices.Contracts;
+using GenericFileServices.Contracts;
 using MagellanFileServices.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,12 +15,13 @@ public class FileReaderServicesTests : IDisposable
 {
     private readonly Mock<IFileServices> _fileServicesMock = new();
     private readonly Mock<ILogger<FileReaderServices<TestDto>>> _loggerMock = new();
+    private readonly Mock<IBlobClientFactory> _blobClientFactoryMock = new();
     private readonly FileReaderServices<TestDto> _sut;
     private readonly string _tempDir;
 
     public FileReaderServicesTests()
     {
-        _sut = new FileReaderServices<TestDto>(_fileServicesMock.Object, _loggerMock.Object);
+        _sut = new FileReaderServices<TestDto>(_fileServicesMock.Object, _loggerMock.Object, _blobClientFactoryMock.Object);
         _tempDir = Path.Combine(Path.GetTempPath(), $"gfis_tests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
     }
@@ -242,6 +244,10 @@ public class FileReaderServicesTests : IDisposable
     {
         var stream = new MemoryStream();
         var errors = new List<string> { "bad row" };
+        var containerClient = new Mock<BlobContainerClient>().Object;
+        _blobClientFactoryMock
+            .Setup(f => f.GetContainerClient(AzuriteConnStr, "mycontainer"))
+            .Returns(containerClient);
         _fileServicesMock
             .Setup(f => f.HandleFileErrorAsync(
                 It.IsAny<BlobContainerClient>(), "path/file.csv", "oops", "20260101", errors))
@@ -259,6 +265,10 @@ public class FileReaderServicesTests : IDisposable
     public async Task HandleFileSuccessAsync_DelegatesToFileServices_WithBlobContainerClient()
     {
         var stream = new MemoryStream();
+        var containerClient = new Mock<BlobContainerClient>().Object;
+        _blobClientFactoryMock
+            .Setup(f => f.GetContainerClient(AzuriteConnStr, "mycontainer"))
+            .Returns(containerClient);
         _fileServicesMock
             .Setup(f => f.HandleFileSuccessAsync(
                 It.IsAny<BlobContainerClient>(), "path/file.csv", "20260101"))

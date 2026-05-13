@@ -15,10 +15,8 @@ namespace GenericFileServices.Contracts;
 /// DTO or record type returned by the data provider and serialised by CsvHelper.
 /// Not required to extend <see cref="GenericFileServices.Models.Database.Base.BaseObject"/>.
 /// </typeparam>
-/// <typeparam name="C">EF Core <see cref="DbContext"/> type used by the consuming application.</typeparam>
-public interface IFileExportServices<T, C>
+public interface IFileExportServices<T>
     where T : class
-    where C : DbContext
 {
     /// <summary>
     /// Fetches data via <paramref name="dataProvider"/>, serialises it with CsvHelper,
@@ -218,4 +216,19 @@ public interface IFileExportServices<T, C>
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
         string? encodingHeaderOverride = null);
+}
+
+/// <summary>
+/// Backward-compatible alias that adds an EF Core <see cref="DbContext"/> type parameter.
+/// The <typeparamref name="C"/> parameter is not used by any interface member; it exists
+/// solely so that existing DI registrations using <c>IFileExportServices&lt;T, M&gt;</c>
+/// continue to compile without change.
+/// New code should prefer the non-generic <see cref="IFileExportServices{T}"/>.
+/// </summary>
+/// <typeparam name="T">DTO or record type returned by the data provider and serialised by CsvHelper.</typeparam>
+/// <typeparam name="C">EF Core <see cref="DbContext"/> type. Not used by interface members.</typeparam>
+public interface IFileExportServices<T, C> : IFileExportServices<T>
+    where T : class
+    where C : DbContext
+{
 }

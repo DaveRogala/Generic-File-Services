@@ -10,14 +10,16 @@ namespace GenericFileServices.Services;
 /// <typeparam name="U">DTO type that each parsed row maps to.</typeparam>
 public class FileReaderServices<U> : IFileReaderServices<U>
 {
-    private protected readonly IFileServices _fileServices;
-    private protected readonly ILogger<FileReaderServices<U>> _logger;
+    private readonly IFileServices _fileServices;
+    private readonly ILogger<FileReaderServices<U>> _logger;
+    private readonly IBlobClientFactory _blobClientFactory;
 
     /// <summary>Initializes a new instance with the required collaborators.</summary>
-    public FileReaderServices(IFileServices fileServices, ILogger<FileReaderServices<U>> logger)
+    public FileReaderServices(IFileServices fileServices, ILogger<FileReaderServices<U>> logger, IBlobClientFactory blobClientFactory)
     {
         _fileServices = fileServices;
         _logger = logger;
+        _blobClientFactory = blobClientFactory;
     }
 
     /// <inheritdoc/>
@@ -35,14 +37,14 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     /// <inheritdoc/>
     public async Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp)
     {
-        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
+        var containerClient = _blobClientFactory.GetContainerClient(blobConnectionString, containerName);
         await _fileServices.HandleFileSuccessAsync(containerClient, filePath, timeStamp);
     }
 
     /// <inheritdoc/>
     public async Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null)
     {
-        var containerClient = new BlobContainerClient(blobConnectionString, containerName);
+        var containerClient = _blobClientFactory.GetContainerClient(blobConnectionString, containerName);
         await _fileServices.HandleFileErrorAsync(containerClient, filePath, exceptionMessage, timeStamp, errors);
     }
 

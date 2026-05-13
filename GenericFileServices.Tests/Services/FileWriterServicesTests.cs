@@ -283,7 +283,7 @@ public class FileWriterServicesTests : IDisposable
         var stem = Path.GetFileNameWithoutExtension(archived[0]);
         var timestampPart = stem["export_".Length..];
         Assert.True(DateTime.TryParseExact(
-            timestampPart, "yyyyMMddHHmmssfff",
+            timestampPart, "yyyyMMddHHmmssfffffff",
             null, System.Globalization.DateTimeStyles.None, out var parsed));
         Assert.True(parsed >= before.AddSeconds(-1));
     }
@@ -512,13 +512,13 @@ public class FileWriterServicesTests : IDisposable
 
         sourceMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(exists, Mock.Of<Response>()));
-        sourceMock.Setup(b => b.DownloadToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response>());
+        sourceMock.Setup(b => b.Uri).Returns(new Uri("https://example.blob.core.windows.net/mycontainer/exports/out.csv"));
         sourceMock.Setup(b => b.DeleteAsync(
                 It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Mock.Of<Response>());
-        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        archiveMock.Setup(b => b.SyncCopyFromUriAsync(
+                It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
 
         return (sourceMock, archiveMock);
     }
@@ -530,7 +530,7 @@ public class FileWriterServicesTests : IDisposable
 
         await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
 
-        archiveMock.Verify(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        archiveMock.Verify(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()), Times.Never);
         sourceMock.Verify(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -546,8 +546,8 @@ public class FileWriterServicesTests : IDisposable
 
         // Re-setup the archive mock return after callback override
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)
@@ -576,12 +576,11 @@ public class FileWriterServicesTests : IDisposable
 
         rootBlobMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-        rootBlobMock.Setup(b => b.DownloadToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response>());
+        rootBlobMock.Setup(b => b.Uri).Returns(new Uri("https://example.blob.core.windows.net/mycontainer/out.csv"));
         rootBlobMock.Setup(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Mock.Of<Response>());
-        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
 
         await _sut.ArchiveExistingBlobAsync(ConnStr, Container, rootBlob);
 
@@ -595,8 +594,8 @@ public class FileWriterServicesTests : IDisposable
         SetupArchiveBlob(exists: true);
         string? capturedPath = null;
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)
@@ -615,8 +614,8 @@ public class FileWriterServicesTests : IDisposable
         SetupArchiveBlob(exists: true);
         string? capturedPath = null;
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
+        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)
@@ -628,7 +627,7 @@ public class FileWriterServicesTests : IDisposable
         var fileName = Path.GetFileNameWithoutExtension(capturedPath!);
         var timestampPart = fileName["out_".Length..];
         Assert.True(DateTime.TryParseExact(
-            timestampPart, "yyyyMMddHHmmssfff",
+            timestampPart, "yyyyMMddHHmmssfffffff",
             null, System.Globalization.DateTimeStyles.None, out var parsed));
         Assert.True(parsed >= before.AddSeconds(-1));
     }
@@ -856,4 +855,50 @@ public class FileWriterServicesTests : IDisposable
         var lines = captured.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Contains("\"Alice\"", lines[1]);
     }
+
+    // ── WriteToFile — path traversal guard (S-3) ───────────────────────────────
+
+    [Fact]
+    public void WriteToFile_Throws_WhenFileNameContainsPathTraversal()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            _sut.WriteToFile(_tempDir, "../escape.csv",
+                Array.Empty<ExportTestDto>(), new UTF8Encoding(false)));
+    }
+
+    [Fact]
+    public void ArchiveExistingFile_Throws_WhenFileNameContainsPathTraversal()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "safe.csv"), "data");
+
+        Assert.Throws<ArgumentException>(() =>
+            _sut.ArchiveExistingFile(_tempDir, "../safe.csv"));
+    }
+
+    // ── WriteToFile — metadata newline injection guard (S-4) ─────────────────
+
+    [Fact]
+    public void WriteToFile_SanitizesNewlines_InMetadataValues()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 1, "Injected\nHeader" } });
+
+        var lines = ReadLines("out.csv");
+        // The newline in the metadata value must be replaced with a space,
+        // so it appears on a single line rather than two.
+        Assert.Equal("Injected Header", lines[0]);
+    }
+
+    [Fact]
+    public void WriteToFile_SanitizesCrLf_InMetadataValues()
+    {
+        _sut.WriteToFile(_tempDir, "out.csv",
+            Array.Empty<ExportTestDto>(), new UTF8Encoding(false),
+            metadataHeader: new Dictionary<int, string> { { 1, "Value\r\nInjected" } });
+
+        var lines = ReadLines("out.csv");
+        Assert.Equal("Value Injected", lines[0]);
+    }
+
 }
