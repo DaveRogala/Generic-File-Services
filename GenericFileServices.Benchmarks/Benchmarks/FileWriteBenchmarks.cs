@@ -21,7 +21,7 @@ public class FileWriteBenchmarks
     [Params(100, 1_000, 10_000)]
     public int N { get; set; }
 
-    private FileWriterServices _sut = null!;
+    private IFileWriterServices _sut = null!;
     private string _tempDir = null!;
     private List<BenchExportDto> _records = null!;
     private Encoding _encoding = null!;
