@@ -426,17 +426,39 @@ Output line order: metadata lines → encoding line (if `writeEncodingHeader: tr
 
 When the convenience parameters (`delimiter`, `writeHeader`) are not enough — for example, to force quoting on specific columns — pass a `CsvConfiguration` directly. This overload omits `delimiter` and `writeHeader`; set those on the configuration object instead.
 
+`CsvConfiguration` is constructed with a `CultureInfo` and then customised via object initialiser:
+
 ```csharp
 using CsvHelper.Configuration;
 using System.Globalization;
 
+// Always quote a specific column
 var config = new CsvConfiguration(CultureInfo.InvariantCulture)
 {
-    Delimiter = ",",
-    HasHeaderRecord = true,
     ShouldQuote = args => args.MemberMapData?.Member?.Name == nameof(ProductExportDto.Sku)
 };
 
+// Always quote every field
+var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+{
+    ShouldQuote = _ => true
+};
+
+// Pipe-delimited, no column header row
+var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+{
+    Delimiter = "|",
+    HasHeaderRecord = false
+};
+
+// Register a ClassMap for full column-level control (name, order, format, converter)
+var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+config.RegisterClassMap<ProductExportDtoMap>();
+```
+
+Pass the configuration as the fifth argument — the compiler picks the correct overload based on the type:
+
+```csharp
 await exporter.ExportToFileAsync(
     basePath: @"C:\exports",
     fileName: "products.csv",
