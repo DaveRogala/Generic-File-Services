@@ -432,10 +432,17 @@ When the convenience parameters (`delimiter`, `writeHeader`) are not enough — 
 using CsvHelper.Configuration;
 using System.Globalization;
 
-// Always quote a specific column
+// Always quote a specific column by its header name
+// args.Row.HeaderRecord holds the column names; args.Row.Index is the current column
 var config = new CsvConfiguration(CultureInfo.InvariantCulture)
 {
-    ShouldQuote = args => args.MemberMapData?.Member?.Name == nameof(ProductExportDto.Sku)
+    ShouldQuote = args => args.Row.HeaderRecord?[args.Row.Index] == "SKU"
+};
+
+// Always quote all string fields
+var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+{
+    ShouldQuote = args => args.FieldType == typeof(string)
 };
 
 // Always quote every field
