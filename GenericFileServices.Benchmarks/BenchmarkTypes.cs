@@ -18,6 +18,14 @@ public class BenchDto
     public string Name { get; set; } = "";
 }
 
+public class BenchExportDto
+{
+    public string Name { get; set; } = "";
+    public int Value { get; set; }
+    public decimal Price { get; set; }
+    public DateTime Date { get; set; }
+}
+
 public class BenchDbContext(DbContextOptions<BenchDbContext> options) : DbContext(options);
 
 // ── Concrete FileImportServices for reconciliation benchmarks ─────────────────

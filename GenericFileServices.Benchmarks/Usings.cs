@@ -1,7 +1,9 @@
 global using System.Diagnostics.CodeAnalysis;
+global using System.Globalization;
 global using System.Linq.Expressions;
 global using System.Text;
 global using Azure.Storage.Blobs;
+global using CsvHelper.Configuration;
 global using GenericFileServices.Benchmarks;
 global using GenericFileServices.Contracts;
 global using GenericFileServices.Models;
