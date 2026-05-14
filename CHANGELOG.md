@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to GenericFileImportServices are documented here.
+All notable changes to GenericFileServices are documented here.
 
 ## [2.1.0] - 2026-04-24
 
@@ -48,9 +48,27 @@ All notable changes to GenericFileImportServices are documented here.
 
 ---
 
-## [1.0.0] - initial release
+## [1.0.0] - 2026-05-14
 
-- Initial release of `GenericFileImportServices`.
+Renamed the library from `GenericFileImportServices` to `GenericFileServices` and added a complete file export pipeline alongside the existing import functionality.
+
+### New features
+
+- **`IFileExportServices<T,C>`** — orchestrates database-to-file exports: data retrieval via a consumer-supplied async delegate, CsvHelper serialisation, and writing to a local path or Azure Blob Storage. Both `ExportToFileAsync` and `ExportToBlobAsync` return `Task<List<string>>`; an empty list indicates success.
+- **`IFileWriterServices`** — low-level writer used by `IFileExportServices`. Exposes `WriteToFile`, `WriteToBlobAsync`, `ArchiveExistingFile`, and `ArchiveExistingBlobAsync` directly for consumers that manage data retrieval themselves.
+- **`IBlobClientFactory` / `BlobClientFactory`** — abstracts `BlobContainerClient` construction to allow test doubles without a live Azure Storage account.
+- **`AddFileExportServices<T,C>`** DI extension — registers `IBlobClientFactory` (singleton), `IFileWriterServices`, and `IFileExportServices<T,C>` with an optional `DbContextOptionsBuilder` overload.
+- **Archive support** — both `ExportToFileAsync` and `ExportToBlobAsync` accept `archiveExistingFile`/`archiveExistingBlob` and `archivePath` parameters. Existing files are timestamped (`yyyyMMddHHmmssfff`) and moved before the new output is written.
+- **`writeHeader`** — when `false`, suppresses the CSV column header row; output contains data rows only.
+- **`writeEncodingHeader`** — when `true`, writes the encoding name as the first line of the output (e.g. `utf-8`). Overridable via `encodingHeaderOverride`.
+- **`metadataHeader`** — optional `IReadOnlyDictionary<int, string>` written before the encoding line and CSV header. Entries are output in ascending key order; gaps are ignored.
+- **`CsvConfiguration` overloads** — alternative overloads of `WriteToFile`, `WriteToBlobAsync`, `ExportToFileAsync`, and `ExportToBlobAsync` that accept a `CsvConfiguration` directly, giving consumers full CsvHelper control (e.g. `ShouldQuote`, `ClassMap` registration) without mixing concerns with the convenience parameters.
+
+---
+
+## Pre-1.0 — GenericFileImportServices
+
+- Import-only library under the name `GenericFileImportServices`.
 - Abstract base `FileImportServices<T,U,C>` with file-system and Azure Blob Storage overloads.
 - `DatabaseServices<T,C>` with soft-delete and hard-delete support via `BaseObject`.
 - `FileReaderServices<U>` delegating to `MagellanFileServices`.
