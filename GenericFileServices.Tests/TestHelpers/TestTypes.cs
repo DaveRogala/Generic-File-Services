@@ -1,4 +1,3 @@
-using CsvHelper.Configuration.Attributes;
 using GenericFileServices.Contracts;
 using GenericFileServices.Models;
 using GenericFileServices.Models.Database.Base;
@@ -24,10 +23,10 @@ public class TestDto
 /// <summary>DTO for headerless CSV tests; columns mapped by position via [Index].</summary>
 public class TestHeaderlessDto
 {
-    [Index(0)]
+    [CsvHelper.Configuration.Attributes.Index(0)]
     public string Name { get; set; } = "";
 
-    [Index(1)]
+    [CsvHelper.Configuration.Attributes.Index(1)]
     public int Value { get; set; }
 }
 
