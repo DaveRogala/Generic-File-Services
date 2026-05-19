@@ -207,6 +207,84 @@ public class FileReaderServicesTests : IDisposable
             Times.Once);
     }
 
+    // ── Headerless file import ───────────────────────────────────────────────
+
+    [Fact]
+    public void ReadFromFile_File_Headerless_ParsesDataByIndex_WithoutCallingFileServices()
+    {
+        var sutH = new FileReaderServices<TestHeaderlessDto>(
+            _fileServicesMock.Object, new Mock<ILogger<FileReaderServices<TestHeaderlessDto>>>().Object, _blobClientFactoryMock.Object);
+        var csvPath = Path.Combine(_tempDir, "headerless.csv");
+        File.WriteAllText(csvPath, "Alice,42\r\nBob,7\r\n");
+
+        var results = sutH.ReadFromFile(_tempDir, "headerless.csv", Encoding.UTF8, fileHasHeader: false);
+
+        Assert.Single(results);
+        Assert.Equal(2, results[0].ObjectResults!.Count);
+        Assert.Equal("Alice", results[0].ObjectResults![0].Name);
+        Assert.Equal(42, results[0].ObjectResults![0].Value);
+        Assert.Equal("Bob", results[0].ObjectResults![1].Name);
+        Assert.Equal(7, results[0].ObjectResults![1].Value);
+        _fileServicesMock.Verify(
+            f => f.GetDataFromFile<TestHeaderlessDto>(It.IsAny<string>(), It.IsAny<Encoding>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Never);
+        _fileServicesMock.Verify(
+            f => f.GetDataFromFile<TestHeaderlessDto>(It.IsAny<string>(), It.IsAny<Encoding>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void ReadFromFile_File_Headerless_ReturnsErrors_WhenRowCannotBeParsed()
+    {
+        var sutH = new FileReaderServices<TestHeaderlessDto>(
+            _fileServicesMock.Object, new Mock<ILogger<FileReaderServices<TestHeaderlessDto>>>().Object, _blobClientFactoryMock.Object);
+        var csvPath = Path.Combine(_tempDir, "bad.csv");
+        File.WriteAllText(csvPath, "Alice,not_an_int\r\n");
+
+        var results = sutH.ReadFromFile(_tempDir, "bad.csv", Encoding.UTF8, fileHasHeader: false);
+
+        Assert.Single(results);
+        Assert.NotEmpty(results[0].Errors);
+    }
+
+    [Fact]
+    public void ReadFromFile_Stream_Headerless_ParsesDataByIndex_WithoutCallingFileServices()
+    {
+        var sutH = new FileReaderServices<TestHeaderlessDto>(
+            _fileServicesMock.Object, new Mock<ILogger<FileReaderServices<TestHeaderlessDto>>>().Object, _blobClientFactoryMock.Object);
+        var csv = "Charlie,99\r\nDave,3\r\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var results = sutH.ReadFromFile(stream, "stream.csv", Encoding.UTF8, firstLineContainsEncoding: false, fileHasHeader: false);
+
+        Assert.Single(results);
+        Assert.Equal(2, results[0].ObjectResults!.Count);
+        Assert.Equal("Charlie", results[0].ObjectResults![0].Name);
+        Assert.Equal(99, results[0].ObjectResults![0].Value);
+        _fileServicesMock.Verify(
+            f => f.GetDataFromFile<TestHeaderlessDto>(It.IsAny<Stream>(), It.IsAny<Encoding>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Never);
+        _fileServicesMock.Verify(
+            f => f.GetDataFromFile<TestHeaderlessDto>(It.IsAny<Stream>(), It.IsAny<Encoding>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void ReadFromFile_File_HeaderPresent_StillDelegatesToFileServices_WhenFileHasHeaderTrue()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "data.csv"), "Name\r\nAlice\r\n");
+        _fileServicesMock
+            .Setup(f => f.GetDataFromFile<TestDto>(It.IsAny<string>(), It.IsAny<Encoding>(), It.IsAny<bool>(), It.IsAny<string>()))
+            .Returns(ResultWithData("Alice"));
+
+        var results = _sut.ReadFromFile(_tempDir, "data.csv", Encoding.UTF8, fileHasHeader: true);
+
+        _fileServicesMock.Verify(
+            f => f.GetDataFromFile<TestDto>(It.IsAny<string>(), It.IsAny<Encoding>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Once);
+        Assert.Single(results);
+    }
+
     // ── HandleFileError / HandleFileSuccess (local) ──────────────────────────
 
     [Fact]

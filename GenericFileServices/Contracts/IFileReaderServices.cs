@@ -21,7 +21,11 @@ public interface IFileReaderServices<U>
     /// <param name="multipleFiles">Allow more than one matching file. Throws when <c>false</c> and multiple files are found.</param>
     /// <param name="rowsToSkip">Number of leading rows to skip before parsing begins.</param>
     /// <param name="fixUnescapedQuotes">Attempt to repair unescaped quote characters in CSV fields.</param>
-    List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false);
+    /// <param name="fileHasHeader">
+    /// When <c>true</c> (the default), the first row is a header row used for column mapping.
+    /// When <c>false</c>, the file is headerless and <c>[Index]</c> attributes on the DTO drive column order.
+    /// </param>
+    List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false, bool fileHasHeader = true);
 
     /// <summary>
     /// Simplified overload using <see cref="Encoding.Default"/> and comma delimiter.
@@ -42,7 +46,11 @@ public interface IFileReaderServices<U>
     /// <param name="delimiter">Column delimiter. Defaults to <c>","</c>.</param>
     /// <param name="rowsToSkip">Number of leading rows to skip before parsing begins.</param>
     /// <param name="fixUnescapedQuotes">Attempt to repair unescaped quote characters in CSV fields.</param>
-    List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false);
+    /// <param name="fileHasHeader">
+    /// When <c>true</c> (the default), the first row is a header row used for column mapping.
+    /// When <c>false</c>, the file is headerless and <c>[Index]</c> attributes on the DTO drive column order.
+    /// </param>
+    List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false, bool fileHasHeader = true);
 
     /// <summary>Moves or renames a file to the error location and optionally records per-row error messages.</summary>
     /// <param name="basePath">Directory containing the file.</param>

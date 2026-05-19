@@ -55,6 +55,13 @@ public record FileImportOptions
     /// </summary>
     public bool FixUnescapedQuotes { get; init; } = false;
 
+    /// <summary>
+    /// When <c>true</c> (the default), the file contains a header row that CsvHelper uses for
+    /// column mapping. When <c>false</c>, the file is headerless and column order is
+    /// determined by <c>[Index]</c> attributes on the DTO type.
+    /// </summary>
+    public bool FileHasHeader { get; init; } = true;
+
     /// <summary>A <see cref="FileImportOptions"/> instance with all default values.</summary>
     public static readonly FileImportOptions Default = new();
 }

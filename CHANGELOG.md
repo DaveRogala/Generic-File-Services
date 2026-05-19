@@ -2,6 +2,15 @@
 
 All notable changes to GenericFileServices are documented here.
 
+## [Unreleased]
+
+### New features
+
+- **`FileImportOptions.FileHasHeader`** — new `bool` property (default `true`). Set to `false` to import headerless CSV files; CsvHelper's `[Index]` attributes on the DTO type then determine column order. The underlying `IFileServices` delegation is bypassed in the headerless path; CsvHelper reads directly with `HasHeaderRecord = false`.
+- **`IFileReaderServices.ReadFromFile` — `fileHasHeader` parameter** — both the file-system and stream overloads now accept a trailing `bool fileHasHeader = true` parameter. Existing call sites are unaffected; pass `fileHasHeader: false` to activate headerless parsing.
+
+---
+
 ## [3.0.0] - 2026-05-13
 
 ### Breaking changes

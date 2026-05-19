@@ -49,7 +49,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     }
 
     /// <inheritdoc/>
-    public virtual List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
+    public virtual List<FileResults<U>> ReadFromFile(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfFileMissing = true, bool multipleFiles = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false, bool fileHasHeader = true)
     {
         try
         {
@@ -77,9 +77,11 @@ public class FileReaderServices<U> : IFileReaderServices<U>
                 _logger.LogInformation("Processing file {fileName}", file.Name);
 
                 var filePath = Path.Combine(basePath, file.Name);
-                ObjectResult<U> importResult = rowsToSkip > 0 || fixUnescapedQuotes
-                    ? _fileServices.GetDataFromFile<U>(filePath, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
-                    : _fileServices.GetDataFromFile<U>(filePath, encoding, firstLineContainsEncoding, delimiter);
+                ObjectResult<U> importResult = !fileHasHeader
+                    ? ReadHeaderless(filePath, encoding, delimiter)
+                    : rowsToSkip > 0 || fixUnescapedQuotes
+                        ? _fileServices.GetDataFromFile<U>(filePath, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
+                        : _fileServices.GetDataFromFile<U>(filePath, encoding, firstLineContainsEncoding, delimiter);
 
                 fileResults.Add(new(importResult, file.Name));
                 if (importResult.Errors.Count > 0)
@@ -103,13 +105,15 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     }
 
     /// <inheritdoc/>
-    public List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false)
+    public List<FileResults<U>> ReadFromFile(Stream stream, string fileName, Encoding encoding, bool firstLineContainsEncoding, string delimiter = ",", int rowsToSkip = 0, bool fixUnescapedQuotes = false, bool fileHasHeader = true)
     {
         try
         {
-            ObjectResult<U> importResult = rowsToSkip > 0 || fixUnescapedQuotes
-                ? _fileServices.GetDataFromFile<U>(stream, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
-                : _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter);
+            ObjectResult<U> importResult = !fileHasHeader
+                ? ReadHeaderless(stream, encoding, delimiter)
+                : rowsToSkip > 0 || fixUnescapedQuotes
+                    ? _fileServices.GetDataFromFile<U>(stream, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
+                    : _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter);
             return [new(importResult, fileName)];
         }
         catch (Exception ex)
@@ -117,5 +121,43 @@ public class FileReaderServices<U> : IFileReaderServices<U>
             _logger.LogError(ex, "Error reading from file");
             throw;
         }
+    }
+
+    private static ObjectResult<U> ReadHeaderless(string filePath, Encoding encoding, string delimiter)
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = false,
+            Delimiter = delimiter,
+        };
+        var records = new List<U>();
+        var errors = new List<string>();
+        using var reader = new StreamReader(filePath, encoding);
+        using var csv = new CsvReader(reader, config);
+        while (csv.Read())
+        {
+            try { records.Add(csv.GetRecord<U>()!); }
+            catch (Exception ex) { errors.Add(ex.Message); }
+        }
+        return new(records, errors);
+    }
+
+    private static ObjectResult<U> ReadHeaderless(Stream stream, Encoding encoding, string delimiter)
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = false,
+            Delimiter = delimiter,
+        };
+        var records = new List<U>();
+        var errors = new List<string>();
+        using var reader = new StreamReader(stream, encoding, leaveOpen: true);
+        using var csv = new CsvReader(reader, config);
+        while (csv.Read())
+        {
+            try { records.Add(csv.GetRecord<U>()!); }
+            catch (Exception ex) { errors.Add(ex.Message); }
+        }
+        return new(records, errors);
     }
 }

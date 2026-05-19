@@ -1,3 +1,4 @@
+using CsvHelper.Configuration.Attributes;
 using GenericFileServices.Contracts;
 using GenericFileServices.Models;
 using GenericFileServices.Models.Database.Base;
@@ -18,6 +19,16 @@ public class TestEntity : BaseObject
 public class TestDto
 {
     public string Name { get; set; } = "";
+}
+
+/// <summary>DTO for headerless CSV tests; columns mapped by position via [Index].</summary>
+public class TestHeaderlessDto
+{
+    [Index(0)]
+    public string Name { get; set; } = "";
+
+    [Index(1)]
+    public int Value { get; set; }
 }
 
 public record ExportTestDto(string Name, int Value);
