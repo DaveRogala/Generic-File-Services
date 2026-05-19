@@ -199,6 +199,7 @@ Task<List<string>> ProcessFileAsync(
 | `hardDelete` | `false` | Permanently delete; `false` sets `DateDeletedUtc` (soft delete) |
 | `rowsToSkip` | `0` | Number of leading rows to skip before parsing (e.g. metadata headers) |
 | `fixUnescapedQuotes` | `false` | Attempt to repair unescaped quote characters in CSV fields |
+| `fileHasHeader` | `true` | When `false`, the file is headerless and `[Index]` attributes on the DTO determine column order. Only available via `FileImportOptions`; the obsolete master overloads always use `true`. |
 
 ### `FileImportOptions` overloads (preferred)
 
@@ -222,6 +223,12 @@ await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
     MultipleFiles = true,
     ArchiveIfSuccess = false
 });
+
+// Headerless file — column order driven by [Index] on the DTO
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    FileHasHeader = false
+});
 ```
 
 `FileImportOptions` properties mirror the parameters of the master overload — see the parameter reference table above.
@@ -240,6 +247,35 @@ ProcessFileAsync(basePath, fileNamePattern, rowsToSkip: 3)
 // Hard delete
 ProcessFileAsync(basePath, fileNamePattern, hardDelete: true)
 ```
+
+### Headerless files
+
+When the input file has no column header row, set `FileHasHeader = false` in `FileImportOptions`. The library reads the file directly with CsvHelper (`HasHeaderRecord = false`) and uses the `[Index]` attribute on each DTO property to determine column order.
+
+**1. Annotate the DTO with `[Index]`:**
+
+```csharp
+using CsvHelper.Configuration.Attributes;
+
+public class ProductDto
+{
+    [Index(0)] public string Sku  { get; set; } = "";
+    [Index(1)] public string Name { get; set; } = "";
+    [Index(2)] public decimal Price { get; set; }
+}
+```
+
+**2. Pass `FileHasHeader = false`:**
+
+```csharp
+await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOptions
+{
+    FileHasHeader = false,
+    Delimiter = ","        // or "\t", "|", etc.
+});
+```
+
+The library will parse each row by column position and map it to the property whose `[Index]` matches. Properties without `[Index]` are ignored during headerless reads. All other `FileImportOptions` properties (`Delimiter`, `RowsToSkip`, `ArchiveIfSuccess`, etc.) work normally alongside `FileHasHeader = false`.
 
 ---
 
@@ -644,7 +680,8 @@ public class MyFileReaderServices(
         string basePath, string fileNamePattern, Encoding encoding,
         string delimiter = ",", bool firstLineContainsEncoding = false,
         bool failIfFileMissing = true, bool multipleFiles = false,
-        int rowsToSkip = 0, bool fixUnescapedQuotes = false)
+        int rowsToSkip = 0, bool fixUnescapedQuotes = false,
+        bool fileHasHeader = true)
     {
         // custom logic
     }
