@@ -35,13 +35,13 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
-        => await ProcessStreamCoreAsync(stream, blobConnectionString, containerName, filePath, encoding, delimiter, firstLineContainsEncoding, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true);
+        => await ProcessStreamCoreAsync(stream, blobConnectionString, containerName, filePath, encoding, delimiter, firstLineContainsEncoding, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null);
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
-        => await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding, failIfNotFound, multipleFiles, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true);
+        => await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding, failIfNotFound, multipleFiles, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null);
 
-    private async Task<List<string>> ProcessStreamCoreAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader)
+    private async Task<List<string>> ProcessStreamCoreAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage)
     {
         try
         {
@@ -58,15 +58,19 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                 string timeStamp = DateTime.UtcNow.ToString(Constants.TimestampFormat);
                 try
                 {
+                    if (failIfNoRecords && (fileResult.ObjectResults is null || fileResult.ObjectResults.Count == 0))
+                        throw new InvalidOperationException($"File '{fileResult.FileName}' contained no data records.");
+
                     if (fileResult.ObjectResults is { Count: > 0 })
                     {
                         List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
+                        var addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
+                        var updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
+                        var deleteEntities = GetDeleteEntities(existingEntities, fileResult.ObjectResults);
 
-                        await _databaseServices.UpdateDatabaseAsync(
-                            GetAddEntities(existingEntities, fileResult.ObjectResults),
-                            GetUpdateEntities(existingEntities, fileResult.ObjectResults),
-                            GetDeleteEntities(existingEntities, fileResult.ObjectResults),
-                            hardDelete);
+                        CheckChangeThresholds(fileResult.FileName, addEntities, deleteEntities, existingEntities, errorThresholdPercentage, warningThresholdPercentage);
+
+                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete);
                     }
                     if (fileResult.Errors.Count > 0)
                     {
@@ -93,7 +97,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
-    private async Task<List<string>> ProcessFileCoreAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool failIfNotFound, bool multipleFiles, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader)
+    private async Task<List<string>> ProcessFileCoreAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool failIfNotFound, bool multipleFiles, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage)
     {
         try
         {
@@ -109,15 +113,20 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                 string timeStamp = DateTime.UtcNow.ToString(Constants.TimestampFormat);
                 try
                 {
+                    if (failIfNoRecords && (fileResult.ObjectResults is null || fileResult.ObjectResults.Count == 0))
+                        throw new InvalidOperationException($"File '{fileResult.FileName}' contained no data records.");
+
                     if (fileResult.ObjectResults is { Count: > 0 })
                     {
                         // Reload before each file so subsequent files see entities added/updated by earlier files.
                         List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
-                        await _databaseServices.UpdateDatabaseAsync(
-                            GetAddEntities(existingEntities, fileResult.ObjectResults),
-                            GetUpdateEntities(existingEntities, fileResult.ObjectResults),
-                            GetDeleteEntities(existingEntities, fileResult.ObjectResults),
-                            hardDelete);
+                        var addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
+                        var updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
+                        var deleteEntities = GetDeleteEntities(existingEntities, fileResult.ObjectResults);
+
+                        CheckChangeThresholds(fileResult.FileName, addEntities, deleteEntities, existingEntities, errorThresholdPercentage, warningThresholdPercentage);
+
+                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete);
                     }
                     if (fileResult.Errors.Count > 0)
                     {
@@ -141,6 +150,29 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             _logger.LogError(ex, "Error processing files at {BasePath} matching {Pattern}", basePath, fileNamePattern);
             throw;
         }
+    }
+
+    private void CheckChangeThresholds(string fileName, List<T> addEntities, List<T> deleteEntities, List<T> existingEntities, double? errorThresholdPercentage, double? warningThresholdPercentage)
+    {
+        if (!errorThresholdPercentage.HasValue && !warningThresholdPercentage.HasValue)
+            return;
+
+        int activeCount = existingEntities.Count(e => e.DateDeletedUtc is null);
+        if (activeCount == 0)
+            return;
+
+        double addPct = (double)addEntities.Count / activeCount * 100;
+        double deletePct = (double)deleteEntities.Count / activeCount * 100;
+
+        if (errorThresholdPercentage.HasValue && (addPct > errorThresholdPercentage.Value || deletePct > errorThresholdPercentage.Value))
+            throw new InvalidOperationException(
+                $"Import aborted for '{fileName}': change threshold exceeded " +
+                $"(adds {addPct:F1}%, deletes {deletePct:F1}%, error threshold {errorThresholdPercentage.Value}%).");
+
+        if (warningThresholdPercentage.HasValue && (addPct > warningThresholdPercentage.Value || deletePct > warningThresholdPercentage.Value))
+            _logger.LogWarning(
+                "Change threshold warning for '{FileName}': adds {AddPct:F1}%, deletes {DeletePct:F1}% (warning threshold {Threshold}%).",
+                fileName, addPct, deletePct, warningThresholdPercentage.Value);
     }
 
     /// <summary>
@@ -171,7 +203,8 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             options.Encoding, options.Delimiter,
             options.FirstLineContainsEncoding, options.FailIfNotFound, options.MultipleFiles,
             options.ArchiveIfSuccess, options.HardDelete, options.RowsToSkip, options.FixUnescapedQuotes,
-            options.FileHasHeader);
+            options.FileHasHeader, options.FailIfNoRecords,
+            options.ErrorThresholdPercentage, options.WarningThresholdPercentage);
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, FileImportOptions)"/>
     public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options)
@@ -179,7 +212,8 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
             stream, blobConnectionString, containerName, filePath,
             options.Encoding, options.Delimiter,
             options.FirstLineContainsEncoding, options.ArchiveIfSuccess, options.HardDelete,
-            options.RowsToSkip, options.FixUnescapedQuotes, options.FileHasHeader);
+            options.RowsToSkip, options.FixUnescapedQuotes, options.FileHasHeader,
+            options.FailIfNoRecords, options.ErrorThresholdPercentage, options.WarningThresholdPercentage);
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)

@@ -40,7 +40,7 @@ public class FileImportServicesTests
             .Setup(r => r.ReadFromFile(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Encoding>(),
                 It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(),
-                It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<bool>()))
+                It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns([.. results]);
 
     private void SetupExistingEntities(params TestEntity[] entities) =>
@@ -221,7 +221,7 @@ public class FileImportServicesTests
             .Setup(r => r.ReadFromFile(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Encoding>(),
                 It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(),
-                It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<bool>()))
+                It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns([
                 MakeResult("file1.csv", [new TestDto { Name = "A" }]),
                 MakeResult("file2.csv", [new TestDto { Name = "B" }])
@@ -323,6 +323,165 @@ public class FileImportServicesTests
         var errors = await _sut.ProcessFileAsync(BasePath, Pattern, FileImportOptions.Default);
 
         Assert.Empty(errors);
+    }
+
+    // ── FailIfNoRecords ──────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_ReturnsError_WhenNoRecordsAndFailIfNoRecordsTrue()
+    {
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", []));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            FailIfNoRecords = true
+        });
+
+        Assert.NotEmpty(errors);
+        _readerMock.Verify(
+            r => r.HandleFileError(BasePath, "data.csv", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()),
+            Times.Once);
+        _dbMock.Verify(d => d.UpdateDatabaseAsync(
+            It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_Succeeds_WhenNoRecordsAndFailIfNoRecordsFalse()
+    {
+        SetupExistingEntities();
+        SetupReader(MakeResult("data.csv", []));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            FailIfNoRecords = false
+        });
+
+        Assert.Empty(errors);
+    }
+
+    // ── ErrorThresholdPercentage ─────────────────────────────────────────────
+
+    // 5 active entities; 2 adds + 2 deletes = 40% each — above a 30% error threshold.
+    private static List<TestEntity> FiveActiveEntities() =>
+        Enumerable.Range(1, 5).Select(i => new TestEntity { Name = $"Entity{i}" }).ToList();
+
+    private static List<TestDto> DtosWithTwoNewTwoRemoved() => [
+        new() { Name = "Entity1" },
+        new() { Name = "Entity2" },
+        new() { Name = "Entity3" },
+        new() { Name = "NewA" },
+        new() { Name = "NewB" },
+    ];
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_AbortsImport_WhenErrorThresholdExceeded()
+    {
+        SetupExistingEntities([.. FiveActiveEntities()]);
+        SetupReader(MakeResult("data.csv", DtosWithTwoNewTwoRemoved()));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            ErrorThresholdPercentage = 30   // 40% > 30% → abort
+        });
+
+        Assert.NotEmpty(errors);
+        _dbMock.Verify(d => d.UpdateDatabaseAsync(
+            It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            Times.Never);
+        _readerMock.Verify(
+            r => r.HandleFileError(BasePath, "data.csv", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_Proceeds_WhenBelowErrorThreshold()
+    {
+        SetupExistingEntities([.. FiveActiveEntities()]);
+        SetupReader(MakeResult("data.csv", DtosWithTwoNewTwoRemoved()));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            ErrorThresholdPercentage = 50   // 40% < 50% → proceed
+        });
+
+        Assert.Empty(errors);
+        _dbMock.Verify(d => d.UpdateDatabaseAsync(
+            It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_SkipsThresholdCheck_WhenNoActiveEntities()
+    {
+        // All existing entities are soft-deleted — activeCount == 0, threshold skipped.
+        var softDeleted = new TestEntity { Name = "Gone", DateDeletedUtc = DateTime.UtcNow };
+        SetupExistingEntities(softDeleted);
+        SetupReader(MakeResult("data.csv", [new TestDto { Name = "NewA" }, new TestDto { Name = "NewB" }]));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            ErrorThresholdPercentage = 1    // would abort if active count > 0
+        });
+
+        Assert.Empty(errors);
+        _dbMock.Verify(d => d.UpdateDatabaseAsync(
+            It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            Times.Once);
+    }
+
+    // ── WarningThresholdPercentage ───────────────────────────────────────────
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_LogsWarning_AndProceeds_WhenWarningThresholdExceeded()
+    {
+        SetupExistingEntities([.. FiveActiveEntities()]);
+        SetupReader(MakeResult("data.csv", DtosWithTwoNewTwoRemoved()));
+
+        var errors = await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            WarningThresholdPercentage = 30     // 40% > 30% → warn but continue
+        });
+
+        Assert.Empty(errors);
+        _dbMock.Verify(d => d.UpdateDatabaseAsync(
+            It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            Times.Once);
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ProcessFileAsync_WithOptions_DoesNotLogWarning_WhenBelowWarningThreshold()
+    {
+        SetupExistingEntities([.. FiveActiveEntities()]);
+        SetupReader(MakeResult("data.csv", DtosWithTwoNewTwoRemoved()));
+
+        await _sut.ProcessFileAsync(BasePath, Pattern, new FileImportOptions
+        {
+            WarningThresholdPercentage = 50     // 40% < 50% → no warning
+        });
+
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
     }
 
 }

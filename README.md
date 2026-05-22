@@ -200,6 +200,9 @@ Task<List<string>> ProcessFileAsync(
 | `rowsToSkip` | `0` | Number of leading rows to skip before parsing (e.g. metadata headers) |
 | `fixUnescapedQuotes` | `false` | Attempt to repair unescaped quote characters in CSV fields |
 | `fileHasHeader` | `true` | When `false`, the file is headerless and `[Index]` attributes on the DTO determine column order. Only available via `FileImportOptions`; the obsolete master overloads always use `true`. |
+| `failIfNoRecords` | `false` | When `true`, throw if the parsed file contains zero data records. Only available via `FileImportOptions`. |
+| `errorThresholdPercentage` | `null` | 0–100. Abort the import (no DB updates) if adds **or** deletes exceed this % of active record count. Only available via `FileImportOptions`. |
+| `warningThresholdPercentage` | `null` | 0–100. Log a warning if adds **or** deletes exceed this % of active record count; import still proceeds. Only available via `FileImportOptions`. |
 
 ### `FileImportOptions` overloads (preferred)
 
@@ -228,6 +231,25 @@ await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
 await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
 {
     FileHasHeader = false
+});
+
+// Reject an empty file (source-of-truth safety check)
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    FailIfNoRecords = true
+});
+
+// Abort if more than 20% of active records would be added or deleted
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    ErrorThresholdPercentage = 20
+});
+
+// Warn if more than 10% of active records would be added or deleted, error above 25%
+await importer.ProcessFileAsync(basePath, fileNamePattern, new FileImportOptions
+{
+    WarningThresholdPercentage = 10,
+    ErrorThresholdPercentage = 25
 });
 ```
 
@@ -276,6 +298,45 @@ await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOption
 ```
 
 The library will parse each row by column position and map it to the property whose `[Index]` matches. Properties without `[Index]` are ignored during headerless reads. All other `FileImportOptions` properties (`Delimiter`, `RowsToSkip`, `ArchiveIfSuccess`, etc.) work normally alongside `FileHasHeader = false`.
+
+### Import safety checks
+
+Three `FileImportOptions` properties protect against bad source files.
+
+**`FailIfNoRecords`** — use for source-of-truth files that must never be empty. If the parsed file yields zero data rows the import is aborted and the file is routed to the error handler, the same as any other per-file failure.
+
+```csharp
+await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOptions
+{
+    FailIfNoRecords = true
+});
+```
+
+**`ErrorThresholdPercentage` / `WarningThresholdPercentage`** — guard against runaway deletes or unexpected bulk adds. After reconciliation the library computes:
+
+```
+addPercentage    = adds.Count    / activeRecordCount * 100
+deletePercentage = deletes.Count / activeRecordCount * 100
+```
+
+If either percentage exceeds `ErrorThresholdPercentage`, the import is aborted — `HandleFileError` is called and no database updates are made. If either exceeds `WarningThresholdPercentage`, a warning is logged but the import proceeds. Both may be set together; the error check runs first.
+
+The threshold check is skipped when there are no active records (all existing entities are soft-deleted), which avoids a divide-by-zero on first load.
+
+```csharp
+// Abort if more than 20% of active records would change
+await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOptions
+{
+    ErrorThresholdPercentage = 20
+});
+
+// Warn above 10%, abort above 25%
+await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOptions
+{
+    WarningThresholdPercentage = 10,
+    ErrorThresholdPercentage   = 25
+});
+```
 
 ---
 

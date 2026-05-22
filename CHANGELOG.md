@@ -8,6 +8,9 @@ All notable changes to GenericFileServices are documented here.
 
 - **`FileImportOptions.FileHasHeader`** — new `bool` property (default `true`). Set to `false` to import headerless CSV files; CsvHelper's `[Index]` attributes on the DTO type then determine column order. The underlying `IFileServices` delegation is bypassed in the headerless path; CsvHelper reads directly with `HasHeaderRecord = false`.
 - **`IFileReaderServices.ReadFromFile` — `fileHasHeader` parameter** — both the file-system and stream overloads now accept a trailing `bool fileHasHeader = true` parameter. Existing call sites are unaffected; pass `fileHasHeader: false` to activate headerless parsing.
+- **`FileImportOptions.FailIfNoRecords`** — new `bool` property (default `false`). Set to `true` for source-of-truth files that must never be empty; a parsed file with zero data records throws an `InvalidOperationException`, which is caught per-file and routes to `HandleFileError`.
+- **`FileImportOptions.ErrorThresholdPercentage`** — new `double?` property (default `null`). When set (0–100), the import is aborted and no database updates are made if the number of adds **or** deletes exceeds this percentage of the current active record count. The error is caught per-file and routes to `HandleFileError`.
+- **`FileImportOptions.WarningThresholdPercentage`** — new `double?` property (default `null`). Same calculation as `ErrorThresholdPercentage` but only logs a warning via `ILogger`; the import proceeds normally. Both thresholds may be set simultaneously — the error check runs first.
 
 ---
 

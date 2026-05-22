@@ -62,6 +62,27 @@ public record FileImportOptions
     /// </summary>
     public bool FileHasHeader { get; init; } = true;
 
+    /// <summary>
+    /// When <c>true</c>, throw if the parsed file contains zero data records.
+    /// Use for source-of-truth files that must never be empty.
+    /// Defaults to <c>false</c>.
+    /// </summary>
+    public bool FailIfNoRecords { get; init; } = false;
+
+    /// <summary>
+    /// When set (0–100), abort the import and skip all database updates if the number of
+    /// adds <em>or</em> deletes exceeds this percentage of the current active record count.
+    /// <c>null</c> disables the check (default).
+    /// </summary>
+    public double? ErrorThresholdPercentage { get; init; } = null;
+
+    /// <summary>
+    /// When set (0–100), log a warning if the number of adds <em>or</em> deletes exceeds this
+    /// percentage of the current active record count. The import still proceeds.
+    /// <c>null</c> disables the check (default).
+    /// </summary>
+    public double? WarningThresholdPercentage { get; init; } = null;
+
     /// <summary>A <see cref="FileImportOptions"/> instance with all default values.</summary>
     public static readonly FileImportOptions Default = new();
 }
