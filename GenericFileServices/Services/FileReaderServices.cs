@@ -35,14 +35,14 @@ public class FileReaderServices<U> : IFileReaderServices<U>
     }
 
     /// <inheritdoc/>
-    public async Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp)
+    public async Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp, CancellationToken cancellationToken = default)
     {
         var containerClient = _blobClientFactory.GetContainerClient(blobConnectionString, containerName);
         await _fileServices.HandleFileSuccessAsync(containerClient, filePath, timeStamp);
     }
 
     /// <inheritdoc/>
-    public async Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null)
+    public async Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null, CancellationToken cancellationToken = default)
     {
         var containerClient = _blobClientFactory.GetContainerClient(blobConnectionString, containerName);
         await _fileServices.HandleFileErrorAsync(containerClient, filePath, exceptionMessage, timeStamp, errors);

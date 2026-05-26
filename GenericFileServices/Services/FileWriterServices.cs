@@ -56,12 +56,13 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         var config = delimiter == "," && writeHeader
             ? DefaultCsvConfiguration
             : new CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { Delimiter = delimiter, HasHeaderRecord = writeHeader };
-        return WriteToBlobAsync(blobConnectionString, containerName, blobPath, records, encoding, config, metadataHeader, writeEncodingHeader, encodingHeaderOverride);
+        return WriteToBlobAsync(blobConnectionString, containerName, blobPath, records, encoding, config, metadataHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -97,7 +98,8 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         CsvConfiguration csvConfiguration,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Writing export blob {BlobPath} to container {ContainerName}", blobPath, containerName);
         var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
@@ -107,15 +109,15 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         {
             if (metadataHeader is not null)
                 foreach (var kvp in metadataHeader.OrderBy(k => k.Key))
-                    await writer.WriteLineAsync(kvp.Value.ReplaceLineEndings(" "));
+                    await writer.WriteLineAsync(kvp.Value.ReplaceLineEndings(" ").AsMemory(), cancellationToken);
             if (writeEncodingHeader)
-                await writer.WriteLineAsync(encodingHeaderOverride ?? encoding.WebName);
+                await writer.WriteLineAsync((encodingHeaderOverride ?? encoding.WebName).AsMemory(), cancellationToken);
             await using var csv = new CsvWriter(writer, csvConfiguration);
             csv.WriteRecords(records);
             await csv.FlushAsync();
         }
         stream.Position = 0;
-        await blobClient.UploadAsync(stream, overwrite: true);
+        await blobClient.UploadAsync(stream, overwrite: true, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -147,11 +149,12 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         string blobConnectionString,
         string containerName,
         string blobPath,
-        string? archivePath = null)
+        string? archivePath = null,
+        CancellationToken cancellationToken = default)
     {
         var blobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, blobPath);
 
-        if (!await blobClient.ExistsAsync())
+        if (!await blobClient.ExistsAsync(cancellationToken))
             return;
 
         var timestamp = DateTime.UtcNow.ToString(Constants.TimestampFormat);
@@ -174,8 +177,8 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         var archiveBlobPath = $"{resolvedArchiveDir}/{archivedFileName}";
         var archiveBlobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, archiveBlobPath);
 
-        await archiveBlobClient.SyncCopyFromUriAsync(blobClient.Uri);
-        await blobClient.DeleteAsync();
+        await archiveBlobClient.SyncCopyFromUriAsync(blobClient.Uri, cancellationToken: cancellationToken);
+        await blobClient.DeleteAsync(cancellationToken: cancellationToken);
 
         _logger.LogInformation("Archived blob {BlobPath} to {ArchiveBlobPath}", blobPath, archiveBlobPath);
     }

@@ -26,7 +26,8 @@ public class FileImportServicesTests
             It.IsAny<List<TestEntity>>(),
             It.IsAny<List<TestEntity>>(),
             It.IsAny<List<TestEntity>>(),
-            It.IsAny<bool>()))
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
     }
 
@@ -44,7 +45,7 @@ public class FileImportServicesTests
             .Returns([.. results]);
 
     private void SetupExistingEntities(params TestEntity[] entities) =>
-        _dbMock.Setup(d => d.GetAllEntitiesAsync()).ReturnsAsync([.. entities]);
+        _dbMock.Setup(d => d.GetAllEntitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([.. entities]);
 
     // ── Argument validation ──────────────────────────────────────────────────
 
@@ -88,7 +89,8 @@ public class FileImportServicesTests
             It.Is<List<TestEntity>>(adds => adds.Any(e => e.Name == "New")),
             It.IsAny<List<TestEntity>>(),
             It.Is<List<TestEntity>>(deletes => deletes.Any(e => e.Name == "Old")),
-            false),
+            false,
+            It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -141,7 +143,7 @@ public class FileImportServicesTests
         SetupReader(MakeResult("data.csv", [new TestDto { Name = "X" }]));
         _dbMock.Setup(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()))
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("constraint violation"));
 
         var errors = await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, firstLineContainsEncoding: false);
@@ -164,7 +166,7 @@ public class FileImportServicesTests
 
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), true),
+            It.IsAny<List<TestEntity>>(), true, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -179,7 +181,7 @@ public class FileImportServicesTests
         await _sut.ProcessFileAsync(BasePath, Pattern, Encoding.UTF8, rowsToSkip: 2, fixUnescapedQuotes: true);
 
         _readerMock.Verify(
-            r => r.ReadFromFile(BasePath, Pattern, Encoding.UTF8, ",", false, true, false, 2, true),
+            r => r.ReadFromFile(BasePath, Pattern, Encoding.UTF8, ",", false, true, false, 2, true, It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -194,7 +196,7 @@ public class FileImportServicesTests
         await _sut.ProcessFileAsync(BasePath, Pattern, rowsToSkip: 5);
 
         _readerMock.Verify(
-            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), ",", false, true, false, 5, false),
+            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), ",", false, true, false, 5, false, It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -207,7 +209,7 @@ public class FileImportServicesTests
         await _sut.ProcessFileAsync(BasePath, Pattern, rowsToSkip: 1, fixUnescapedQuotes: true);
 
         _readerMock.Verify(
-            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), ",", false, true, false, 1, true),
+            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), ",", false, true, false, 1, true, It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -231,7 +233,7 @@ public class FileImportServicesTests
 
         // A-2: existingEntities is reloaded before each file so subsequent files see
         // entities written by earlier files.
-        _dbMock.Verify(d => d.GetAllEntitiesAsync(), Times.Exactly(2));
+        _dbMock.Verify(d => d.GetAllEntitiesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     // ── Stream / blob overload ───────────────────────────────────────────────
@@ -242,7 +244,7 @@ public class FileImportServicesTests
         var stream = new MemoryStream();
         SetupExistingEntities();
         _readerMock
-            .Setup(r => r.ReadFromFile(stream, "upload.csv", Encoding.UTF8, false, ",", 0, false))
+            .Setup(r => r.ReadFromFile(stream, "upload.csv", Encoding.UTF8, false, ",", 0, false, It.IsAny<bool>()))
             .Returns([MakeResult("upload.csv", [new TestDto { Name = "X" }])]);
 
         var errors = await _sut.ProcessFileAsync(
@@ -278,17 +280,17 @@ public class FileImportServicesTests
         var stream = new MemoryStream();
         SetupExistingEntities();
         _readerMock
-            .Setup(r => r.ReadFromFile(stream, "upload.csv", Encoding.UTF8, false, ",", 0, false))
+            .Setup(r => r.ReadFromFile(stream, "upload.csv", Encoding.UTF8, false, ",", 0, false, It.IsAny<bool>()))
             .Returns([MakeResult("upload.csv", [new TestDto { Name = "X" }])]);
         _readerMock
-            .Setup(r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>()))
+            .Setup(r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         await _sut.ProcessFileAsync(
             stream, "connstr", "container", "path/upload.csv", Encoding.UTF8, archiveIfSuccess: true);
 
         _readerMock.Verify(
-            r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>()),
+            r => r.HandleFileSuccessAsync(stream, "connstr", "container", "path/upload.csv", It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -310,7 +312,7 @@ public class FileImportServicesTests
 
         Assert.Empty(errors);
         _readerMock.Verify(
-            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), "|", false, true, true, 0, false),
+            r => r.ReadFromFile(BasePath, Pattern, It.IsAny<Encoding>(), "|", false, true, true, 0, false, It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -344,7 +346,7 @@ public class FileImportServicesTests
             Times.Once);
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -390,7 +392,7 @@ public class FileImportServicesTests
         Assert.NotEmpty(errors);
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _readerMock.Verify(
             r => r.HandleFileError(BasePath, "data.csv", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()),
@@ -411,7 +413,7 @@ public class FileImportServicesTests
         Assert.Empty(errors);
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -431,7 +433,7 @@ public class FileImportServicesTests
         Assert.Empty(errors);
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -451,7 +453,7 @@ public class FileImportServicesTests
         Assert.Empty(errors);
         _dbMock.Verify(d => d.UpdateDatabaseAsync(
             It.IsAny<List<TestEntity>>(), It.IsAny<List<TestEntity>>(),
-            It.IsAny<List<TestEntity>>(), It.IsAny<bool>()),
+            It.IsAny<List<TestEntity>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _loggerMock.Verify(
             l => l.Log(

@@ -30,12 +30,12 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _writerMock
             .Setup(w => w.ArchiveExistingBlobAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
 
@@ -308,7 +308,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             Encoding.UTF8, ",",
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -322,9 +322,9 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?>(
-                (_, _, _, records, _, _, _, _, _, _) => captured = records.ToList())
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?, CancellationToken>(
+                (_, _, _, records, _, _, _, _, _, _, _) => captured = records.ToList())
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -360,7 +360,7 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("upload failed"));
 
         var errors = await _sut.ExportToBlobAsync(
@@ -378,7 +378,7 @@ public class FileExportServicesTests
         await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8);
 
         _writerMock.Verify(w => w.ArchiveExistingBlobAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -389,7 +389,7 @@ public class FileExportServicesTests
             ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
             archiveExistingBlob: true);
 
-        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, null), Times.Once);
+        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -399,7 +399,7 @@ public class FileExportServicesTests
             ConnStr, Container, BlobPath, DataProvider("X"), Encoding.UTF8,
             archiveExistingBlob: true, archivePath: "exports/archive");
 
-        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, "exports/archive"), Times.Once);
+        _writerMock.Verify(w => w.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath, "exports/archive", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -408,7 +408,7 @@ public class FileExportServicesTests
         var callOrder = new List<string>();
         _writerMock
             .Setup(w => w.ArchiveExistingBlobAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Callback(() => callOrder.Add("archive"))
             .Returns(Task.CompletedTask);
         _writerMock
@@ -417,9 +417,9 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?>(
-                (_, _, _, _, _, _, _, _, _, _) => callOrder.Add("write"))
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?, CancellationToken>(
+                (_, _, _, _, _, _, _, _, _, _, _) => callOrder.Add("write"))
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -434,7 +434,7 @@ public class FileExportServicesTests
     {
         _writerMock
             .Setup(w => w.ArchiveExistingBlobAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("copy failed"));
 
         var errors = await _sut.ExportToBlobAsync(
@@ -457,7 +457,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), false, null),
+            It.IsAny<bool>(), false, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -473,7 +473,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, null),
+            It.IsAny<bool>(), true, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -489,7 +489,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, "windows-1252"),
+            It.IsAny<bool>(), true, "windows-1252", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -505,7 +505,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), false, null),
+            It.IsAny<bool>(), false, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -521,7 +521,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, null),
+            It.IsAny<bool>(), true, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -537,7 +537,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, "windows-1252"),
+            It.IsAny<bool>(), true, "windows-1252", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -553,7 +553,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            true, It.IsAny<bool>(), It.IsAny<string?>()),
+            true, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -569,7 +569,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            false, It.IsAny<bool>(), It.IsAny<string?>()),
+            false, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -585,7 +585,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            true, It.IsAny<bool>(), It.IsAny<string?>()),
+            true, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -601,7 +601,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            false, It.IsAny<bool>(), It.IsAny<string?>()),
+            false, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -657,7 +657,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             (IReadOnlyDictionary<int, string>?)null,
-            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()),
+            It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -673,9 +673,9 @@ public class FileExportServicesTests
                 It.IsAny<IEnumerable<ExportTestDto>>(),
                 It.IsAny<Encoding>(), It.IsAny<string>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?>(
-                (_, _, _, _, _, _, meta, _, _, _) => captured = meta)
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?, CancellationToken>(
+                (_, _, _, _, _, _, meta, _, _, _, _) => captured = meta)
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -757,7 +757,7 @@ public class FileExportServicesTests
                 It.IsAny<Encoding>(),
                 It.IsAny<CsvConfiguration>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var errors = await _sut.ExportToBlobAsync(
@@ -779,9 +779,9 @@ public class FileExportServicesTests
                 It.IsAny<Encoding>(),
                 It.IsAny<CsvConfiguration>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
-            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, CsvConfiguration, IReadOnlyDictionary<int, string>?, bool, string?>(
-                (_, _, _, _, _, cfg, _, _, _) => captured = cfg)
+                It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, CsvConfiguration, IReadOnlyDictionary<int, string>?, bool, string?, CancellationToken>(
+                (_, _, _, _, _, cfg, _, _, _, _) => captured = cfg)
             .Returns(Task.CompletedTask);
 
         await _sut.ExportToBlobAsync(
@@ -802,7 +802,7 @@ public class FileExportServicesTests
                 It.IsAny<Encoding>(),
                 It.IsAny<CsvConfiguration>(),
                 It.IsAny<IReadOnlyDictionary<int, string>?>(),
-                It.IsAny<bool>(), It.IsAny<string?>()))
+                It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("upload failed"));
 
         var errors = await _sut.ExportToBlobAsync(

@@ -64,7 +64,8 @@ public interface IFileExportServices<T>
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches data via <paramref name="dataProvider"/>, serialises it with CsvHelper
@@ -115,7 +116,8 @@ public interface IFileExportServices<T>
         string? archivePath = null,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches data via <paramref name="dataProvider"/>, serialises it with CsvHelper,
@@ -165,7 +167,8 @@ public interface IFileExportServices<T>
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches data via <paramref name="dataProvider"/>, serialises it with CsvHelper
@@ -215,7 +218,8 @@ public interface IFileExportServices<T>
         string? archivePath = null,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

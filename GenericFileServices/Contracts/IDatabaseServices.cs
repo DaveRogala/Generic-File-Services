@@ -12,11 +12,13 @@ public interface IDatabaseServices<T, C>
     where C : DbContext
 {
     /// <summary>Returns every non-deleted entity of type <typeparamref name="T"/>.</summary>
-    Task<List<T>> GetAllEntitiesAsync();
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<List<T>> GetAllEntitiesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Returns entities matching <paramref name="predicate"/>.</summary>
     /// <param name="predicate">Filter expression applied server-side.</param>
-    Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Persists adds, updates, and deletes in a single <c>SaveChanges</c> call.
@@ -29,6 +31,7 @@ public interface IDatabaseServices<T, C>
     /// When <c>true</c>, entities in <paramref name="deleteEntities"/> are permanently removed.
     /// When <c>false</c> (default), <c>DateDeletedUtc</c> is set (soft delete).
     /// </param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The number of rows affected.</returns>
-    Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false);
+    Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false, CancellationToken cancellationToken = default);
 }

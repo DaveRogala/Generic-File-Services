@@ -61,7 +61,8 @@ public interface IFileReaderServices<U>
     void HandleFileError(string basePath, string fileName, string exceptionMessage, string timeStamp, List<string>? errors = null);
 
     /// <summary>Moves or renames a blob to the error location and optionally records per-row error messages.</summary>
-    Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task HandleFileErrorAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string exceptionMessage, string timeStamp, List<string>? errors = null, CancellationToken cancellationToken = default);
 
     /// <summary>Moves or renames a successfully processed file to the archive location.</summary>
     /// <param name="basePath">Directory containing the file.</param>
@@ -70,5 +71,6 @@ public interface IFileReaderServices<U>
     void HandleFileSuccess(string basePath, string fileName, string timeStamp);
 
     /// <summary>Moves or renames a successfully processed blob to the archive location.</summary>
-    Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp);
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task HandleFileSuccessAsync(Stream stream, string blobConnectionString, string containerName, string filePath, string timeStamp, CancellationToken cancellationToken = default);
 }

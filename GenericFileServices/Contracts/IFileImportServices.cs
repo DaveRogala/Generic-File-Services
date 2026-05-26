@@ -18,8 +18,9 @@ public interface IFileImportServices<T, U, C>
     /// <param name="basePath">Directory to search.</param>
     /// <param name="fileNamePattern">Wildcard pattern, e.g. <c>"orders_*.csv"</c>.</param>
     /// <param name="options">Import configuration. Pass <see cref="FileImportOptions.Default"/> for default behaviour.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A list of error messages. An empty list indicates a fully successful import.</returns>
-    Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, FileImportOptions options);
+    Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, FileImportOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads from an already-opened blob stream, reconciles with the database, then archives or reports errors.
@@ -29,8 +30,9 @@ public interface IFileImportServices<T, U, C>
     /// <param name="containerName">Blob container name.</param>
     /// <param name="filePath">Full blob path, used for archiving and error reporting.</param>
     /// <param name="options">Import configuration. Pass <see cref="FileImportOptions.Default"/> for default behaviour.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A list of error messages. An empty list indicates a fully successful import.</returns>
-    Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options);
+    Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads from an already-opened blob stream, reconciles with the database, then archives or reports errors.

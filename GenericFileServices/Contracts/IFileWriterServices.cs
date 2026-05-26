@@ -112,7 +112,8 @@ public interface IFileWriterServices
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Serialises <paramref name="records"/> and uploads the result as a blob to
@@ -152,7 +153,8 @@ public interface IFileWriterServices
         CsvConfiguration csvConfiguration,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null);
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// If a file named <paramref name="fileName"/> already exists in <paramref name="basePath"/>,
@@ -182,5 +184,5 @@ public interface IFileWriterServices
     /// When <c>null</c>, defaults to an <c>archive</c> folder inside the blob's current directory,
     /// e.g. <c>"exports/archive"</c>.
     /// </param>
-    Task ArchiveExistingBlobAsync(string blobConnectionString, string containerName, string blobPath, string? archivePath = null);
+    Task ArchiveExistingBlobAsync(string blobConnectionString, string containerName, string blobPath, string? archivePath = null, CancellationToken cancellationToken = default);
 }

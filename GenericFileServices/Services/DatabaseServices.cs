@@ -22,11 +22,11 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
     }
 
     /// <inheritdoc/>
-    public async Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate)
+    public async Task<List<T>> FindEntitiesAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
     {
         try
         {
-            return [.. await _repository.FindAsync(predicate)];
+            return [.. await _repository.FindAsync(predicate, cancellationToken: cancellationToken)];
         }
         catch (Exception ex)
         {
@@ -36,11 +36,11 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
     }
 
     /// <inheritdoc/>
-    public async Task<List<T>> GetAllEntitiesAsync()
+    public async Task<List<T>> GetAllEntitiesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            return [.. await _repository.AllAsync()];
+            return [.. await _repository.AllAsync(cancellationToken: cancellationToken)];
         }
         catch (Exception ex)
         {
@@ -50,7 +50,7 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
     }
 
     /// <inheritdoc/>
-    public async Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false)
+    public async Task<int> UpdateDatabaseAsync(List<T> addEntities, List<T> updateEntities, List<T> deleteEntities, bool hardDelete = false, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -65,7 +65,7 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
             {
                 entity.DateUpdatedUtc = utcNow;
                 entity.DateAddedUtc = utcNow;
-                await _repository.AddAsync(entity);
+                await _repository.AddAsync(entity, cancellationToken);
             }
             if (hardDelete)
             {
@@ -81,7 +81,7 @@ public class DatabaseServices<T, C> : IDatabaseServices<T, C>
                     _repository.Update(entity);
                 }
             }
-            return await _repository.SaveChangesAsync();
+            return await _repository.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {

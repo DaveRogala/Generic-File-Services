@@ -35,13 +35,13 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
-        => await ProcessStreamCoreAsync(stream, blobConnectionString, containerName, filePath, encoding, delimiter, firstLineContainsEncoding, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null);
+        => await ProcessStreamCoreAsync(stream, blobConnectionString, containerName, filePath, encoding, delimiter, firstLineContainsEncoding, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public virtual async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool firstLineContainsEncoding = false, bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true, bool hardDelete = false, int rowsToSkip = 0, bool fixUnescapedQuotes = false)
-        => await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding, failIfNotFound, multipleFiles, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null);
+        => await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding, failIfNotFound, multipleFiles, archiveIfSuccess, hardDelete, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
 
-    private async Task<List<string>> ProcessStreamCoreAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage)
+    private async Task<List<string>> ProcessStreamCoreAsync(Stream stream, string blobConnectionString, string containerName, string filePath, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage, CancellationToken cancellationToken)
     {
         try
         {
@@ -63,27 +63,27 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
 
                     if (fileResult.ObjectResults is { Count: > 0 })
                     {
-                        List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
+                        List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync(cancellationToken);
                         var addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
                         var updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
                         var deleteEntities = GetDeleteEntities(existingEntities, fileResult.ObjectResults);
 
                         CheckChangeThresholds(fileResult.FileName, addEntities, deleteEntities, existingEntities, errorThresholdPercentage, warningThresholdPercentage);
 
-                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete);
+                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete, cancellationToken);
                     }
                     if (fileResult.Errors.Count > 0)
                     {
-                        await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, FileContainedErrors, timeStamp, fileResult.Errors);
+                        await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, FileContainedErrors, timeStamp, fileResult.Errors, cancellationToken);
                     }
                     else if (archiveIfSuccess)
                     {
-                        await _fileReaderServices.HandleFileSuccessAsync(stream, blobConnectionString, containerName, filePath, timeStamp);
+                        await _fileReaderServices.HandleFileSuccessAsync(stream, blobConnectionString, containerName, filePath, timeStamp, cancellationToken);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, ex.Message, timeStamp, fileResult.Errors);
+                    await _fileReaderServices.HandleFileErrorAsync(stream, blobConnectionString, containerName, filePath, ex.Message, timeStamp, fileResult.Errors, cancellationToken);
                     errors.Add($"File: {fileResult.FileName} ({ex.Message})");
                 }
                 return errors;
@@ -97,7 +97,7 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
         }
     }
 
-    private async Task<List<string>> ProcessFileCoreAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool failIfNotFound, bool multipleFiles, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage)
+    private async Task<List<string>> ProcessFileCoreAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter, bool firstLineContainsEncoding, bool failIfNotFound, bool multipleFiles, bool archiveIfSuccess, bool hardDelete, int rowsToSkip, bool fixUnescapedQuotes, bool fileHasHeader, bool failIfNoRecords, double? errorThresholdPercentage, double? warningThresholdPercentage, CancellationToken cancellationToken)
     {
         try
         {
@@ -119,14 +119,14 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
                     if (fileResult.ObjectResults is { Count: > 0 })
                     {
                         // Reload before each file so subsequent files see entities added/updated by earlier files.
-                        List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync();
+                        List<T> existingEntities = await _databaseServices.GetAllEntitiesAsync(cancellationToken);
                         var addEntities = GetAddEntities(existingEntities, fileResult.ObjectResults);
                         var updateEntities = GetUpdateEntities(existingEntities, fileResult.ObjectResults);
                         var deleteEntities = GetDeleteEntities(existingEntities, fileResult.ObjectResults);
 
                         CheckChangeThresholds(fileResult.FileName, addEntities, deleteEntities, existingEntities, errorThresholdPercentage, warningThresholdPercentage);
 
-                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete);
+                        await _databaseServices.UpdateDatabaseAsync(addEntities, updateEntities, deleteEntities, hardDelete, cancellationToken);
                     }
                     if (fileResult.Errors.Count > 0)
                     {
@@ -196,82 +196,82 @@ public abstract class FileImportServices<T, U, C> : IFileImportServices<T, U, C>
     /// <remarks>For large datasets, build a <see cref="HashSet{T}"/> of DTO keys before scanning to keep the implementation O(n) rather than O(n²).</remarks>
     public virtual List<T> GetDeleteEntities(List<T> existingEntities, List<U> dtos) => [];
 
-    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, FileImportOptions)"/>
-    public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, FileImportOptions options)
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, FileImportOptions, CancellationToken)"/>
+    public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, FileImportOptions options, CancellationToken cancellationToken = default)
         => await ProcessFileCoreAsync(
             basePath, fileNamePattern,
             options.Encoding, options.Delimiter,
             options.FirstLineContainsEncoding, options.FailIfNotFound, options.MultipleFiles,
             options.ArchiveIfSuccess, options.HardDelete, options.RowsToSkip, options.FixUnescapedQuotes,
             options.FileHasHeader, options.FailIfNoRecords,
-            options.ErrorThresholdPercentage, options.WarningThresholdPercentage);
+            options.ErrorThresholdPercentage, options.WarningThresholdPercentage, cancellationToken);
 
-    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, FileImportOptions)"/>
-    public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options)
+    /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(Stream, string, string, string, FileImportOptions, CancellationToken)"/>
+    public async Task<List<string>> ProcessFileAsync(Stream stream, string blobConnectionString, string containerName, string filePath, FileImportOptions options, CancellationToken cancellationToken = default)
         => await ProcessStreamCoreAsync(
             stream, blobConnectionString, containerName, filePath,
             options.Encoding, options.Delimiter,
             options.FirstLineContainsEncoding, options.ArchiveIfSuccess, options.HardDelete,
             options.RowsToSkip, options.FixUnescapedQuotes, options.FileHasHeader,
-            options.FailIfNoRecords, options.ErrorThresholdPercentage, options.WarningThresholdPercentage);
+            options.FailIfNoRecords, options.ErrorThresholdPercentage, options.WarningThresholdPercentage, cancellationToken);
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, Encoding encoding, string delimiter = ",", bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, encoding, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool multipleFiles = false, bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool failIfNotFound = true, bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, string delimiter = ",", bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, delimiter, firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool hardDelete)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool firstLineContainsEncoding, bool hardDelete)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, ",", firstLineContainsEncoding, failIfNotFound: true, multipleFiles: false, archiveIfSuccess: true, hardDelete, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, bool failIfNotFound, bool firstLineContainsEncoding, bool archiveIfSuccess)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding, failIfNotFound, multipleFiles: false, archiveIfSuccess);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, ",", firstLineContainsEncoding, failIfNotFound, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip: 0, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes: false, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 
     /// <inheritdoc cref="IFileImportServices{T, U, C}.ProcessFileAsync(string, string, Encoding, string, bool, bool, bool, bool, bool, int, bool)"/>
     public async Task<List<string>> ProcessFileAsync(string basePath, string fileNamePattern, int rowsToSkip, bool fixUnescapedQuotes, bool archiveIfSuccess = true)
     {
-        return await ProcessFileAsync(basePath, fileNamePattern, encoding: Encoding.Default, delimiter: ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes);
+        return await ProcessFileCoreAsync(basePath, fileNamePattern, Encoding.Default, ",", firstLineContainsEncoding: false, failIfNotFound: true, multipleFiles: false, archiveIfSuccess, hardDelete: false, rowsToSkip, fixUnescapedQuotes, fileHasHeader: true, failIfNoRecords: false, errorThresholdPercentage: null, warningThresholdPercentage: null, CancellationToken.None);
     }
 }

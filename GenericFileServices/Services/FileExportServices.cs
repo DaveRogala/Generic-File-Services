@@ -30,7 +30,8 @@ public class FileExportServices<T, C>(
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(basePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
@@ -63,7 +64,8 @@ public class FileExportServices<T, C>(
         string? archivePath = null,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(basePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
@@ -98,7 +100,8 @@ public class FileExportServices<T, C>(
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeHeader = true,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(blobConnectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(containerName);
@@ -108,10 +111,10 @@ public class FileExportServices<T, C>(
         try
         {
             if (archiveExistingBlob)
-                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath);
+                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath, cancellationToken);
 
             var data = await dataProvider();
-            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride);
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, delimiter, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -133,7 +136,8 @@ public class FileExportServices<T, C>(
         string? archivePath = null,
         IReadOnlyDictionary<int, string>? metadataHeader = null,
         bool writeEncodingHeader = false,
-        string? encodingHeaderOverride = null)
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(blobConnectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(containerName);
@@ -143,10 +147,10 @@ public class FileExportServices<T, C>(
         try
         {
             if (archiveExistingBlob)
-                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath);
+                await _fileWriterServices.ArchiveExistingBlobAsync(blobConnectionString, containerName, blobPath, archivePath, cancellationToken);
 
             var data = await dataProvider();
-            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, csvConfiguration, metadataHeader, writeEncodingHeader, encodingHeaderOverride);
+            await _fileWriterServices.WriteToBlobAsync(blobConnectionString, containerName, blobPath, data, encoding, csvConfiguration, metadataHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
         }
         catch (Exception ex)
         {
