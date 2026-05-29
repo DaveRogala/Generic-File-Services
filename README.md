@@ -297,7 +297,24 @@ await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOption
 });
 ```
 
-The library will parse each row by column position and map it to the property whose `[Index]` matches. Properties without `[Index]` are ignored during headerless reads. All other `FileImportOptions` properties (`Delimiter`, `RowsToSkip`, `ArchiveIfSuccess`, etc.) work normally alongside `FileHasHeader = false`.
+**Combining with `RowsToSkip`:**
+
+When the file also has leading metadata rows before the data rows, set `RowsToSkip` alongside `FileHasHeader = false`. The skipped rows are consumed and discarded before CsvHelper starts reading records, so `[Index]` positions still refer to columns in the data rows:
+
+```csharp
+// File layout:
+//   Row 1: "Source: ERP"        ← skip
+//   Row 2: "Extract: 2026-05-29"← skip
+//   Row 3: "SKU001,Widget,9.99" ← first data row → Index(0)=Sku, Index(1)=Name, Index(2)=Price
+
+await importer.ProcessFileAsync(basePath, "products_*.csv", new FileImportOptions
+{
+    FileHasHeader = false,
+    RowsToSkip = 2
+});
+```
+
+The library will parse each row by column position and map it to the property whose `[Index]` matches. Properties without `[Index]` are ignored during headerless reads. All other `FileImportOptions` properties (`Delimiter`, `RowsToSkip`, `ArchiveIfSuccess`, `FailIfNoRecords`, etc.) compose freely with `FileHasHeader = false`.
 
 ### Import safety checks
 

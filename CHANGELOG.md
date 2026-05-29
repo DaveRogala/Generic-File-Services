@@ -13,6 +13,10 @@ All notable changes to GenericFileServices are documented here.
 - **`FileImportOptions.WarningThresholdPercentage`** — new `double?` property (default `null`). Same calculation as `ErrorThresholdPercentage` but only logs a warning via `ILogger`; the import proceeds normally. Both thresholds may be set simultaneously — the error check runs first.
 - **Cancellation token support** — all async methods in `IFileImportServices` (canonical `FileImportOptions` overloads only), `IFileReaderServices`, `IFileWriterServices`, `IFileExportServices`, and `IDatabaseServices` now accept an optional `CancellationToken cancellationToken = default` parameter. Existing call sites are unaffected. Tokens are propagated to Azure Storage SDK calls (`UploadAsync`, `ExistsAsync`, `SyncCopyFromUriAsync`, `DeleteAsync`) and to EF Core repository calls (`AllAsync`, `FindAsync`, `AddAsync`, `SaveChangesAsync`). The `[Obsolete]` overloads on `IFileImportServices` do not receive the token.
 
+### Bug fixes
+
+- **`RowsToSkip` ignored for headerless files** — when `FileHasHeader = false`, leading rows specified by `RowsToSkip` were silently discarded without being skipped; all rows were parsed as data. Fixed: the headerless reader now advances past `RowsToSkip` rows before collecting records, so `FileHasHeader = false` and `RowsToSkip > 0` are fully composable.
+
 ---
 
 ## [3.0.0] - 2026-05-13
