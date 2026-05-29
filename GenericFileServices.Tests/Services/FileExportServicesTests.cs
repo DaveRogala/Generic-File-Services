@@ -457,7 +457,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), false, null, It.IsAny<CancellationToken>()),
+            It.IsAny<bool>(), false, null),
             Times.Once);
     }
 
@@ -473,7 +473,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, null, It.IsAny<CancellationToken>()),
+            It.IsAny<bool>(), true, null),
             Times.Once);
     }
 
@@ -489,7 +489,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            It.IsAny<bool>(), true, "windows-1252", It.IsAny<CancellationToken>()),
+            It.IsAny<bool>(), true, "windows-1252"),
             Times.Once);
     }
 
@@ -553,7 +553,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            true, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            true, It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 
@@ -569,7 +569,7 @@ public class FileExportServicesTests
             It.IsAny<IEnumerable<ExportTestDto>>(),
             It.IsAny<Encoding>(), It.IsAny<string>(),
             It.IsAny<IReadOnlyDictionary<int, string>?>(),
-            false, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            false, It.IsAny<bool>(), It.IsAny<string?>()),
             Times.Once);
     }
 
