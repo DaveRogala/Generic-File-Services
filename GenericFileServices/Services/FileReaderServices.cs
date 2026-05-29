@@ -78,7 +78,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
 
                 var filePath = Path.Combine(basePath, file.Name);
                 ObjectResult<U> importResult = !fileHasHeader
-                    ? ReadHeaderless(filePath, encoding, delimiter)
+                    ? ReadHeaderless(filePath, encoding, delimiter, rowsToSkip)
                     : rowsToSkip > 0 || fixUnescapedQuotes
                         ? _fileServices.GetDataFromFile<U>(filePath, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
                         : _fileServices.GetDataFromFile<U>(filePath, encoding, firstLineContainsEncoding, delimiter);
@@ -110,7 +110,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         try
         {
             ObjectResult<U> importResult = !fileHasHeader
-                ? ReadHeaderless(stream, encoding, delimiter)
+                ? ReadHeaderless(stream, encoding, delimiter, rowsToSkip)
                 : rowsToSkip > 0 || fixUnescapedQuotes
                     ? _fileServices.GetDataFromFile<U>(stream, encoding, rowsToSkip, delimiter, fixUnescapedQuotes)
                     : _fileServices.GetDataFromFile<U>(stream, encoding, firstLineContainsEncoding, delimiter);
@@ -123,7 +123,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         }
     }
 
-    private static ObjectResult<U> ReadHeaderless(string filePath, Encoding encoding, string delimiter)
+    private static ObjectResult<U> ReadHeaderless(string filePath, Encoding encoding, string delimiter, int rowsToSkip)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -134,6 +134,8 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         var errors = new List<string>();
         using var reader = new StreamReader(filePath, encoding);
         using var csv = new CsvReader(reader, config);
+        for (int i = 0; i < rowsToSkip; i++)
+            csv.Read();
         while (csv.Read())
         {
             try { records.Add(csv.GetRecord<U>()!); }
@@ -142,7 +144,7 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         return new(records, errors);
     }
 
-    private static ObjectResult<U> ReadHeaderless(Stream stream, Encoding encoding, string delimiter)
+    private static ObjectResult<U> ReadHeaderless(Stream stream, Encoding encoding, string delimiter, int rowsToSkip)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -153,6 +155,8 @@ public class FileReaderServices<U> : IFileReaderServices<U>
         var errors = new List<string>();
         using var reader = new StreamReader(stream, encoding, leaveOpen: true);
         using var csv = new CsvReader(reader, config);
+        for (int i = 0; i < rowsToSkip; i++)
+            csv.Read();
         while (csv.Read())
         {
             try { records.Add(csv.GetRecord<U>()!); }

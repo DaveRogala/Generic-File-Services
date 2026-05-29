@@ -270,6 +270,39 @@ public class FileReaderServicesTests : IDisposable
     }
 
     [Fact]
+    public void ReadFromFile_File_Headerless_SkipsLeadingRows_WhenRowsToSkipSet()
+    {
+        var sutH = new FileReaderServices<TestHeaderlessDto>(
+            _fileServicesMock.Object, new Mock<ILogger<FileReaderServices<TestHeaderlessDto>>>().Object, _blobClientFactoryMock.Object);
+        var csvPath = Path.Combine(_tempDir, "skip.csv");
+        // First 2 rows should be skipped; only the 3rd row is a data row.
+        File.WriteAllText(csvPath, "metadata line\r\nanother skip line\r\nAlice,42\r\n");
+
+        var results = sutH.ReadFromFile(_tempDir, "skip.csv", Encoding.UTF8, rowsToSkip: 2, fileHasHeader: false);
+
+        Assert.Single(results);
+        Assert.Single(results[0].ObjectResults!);
+        Assert.Equal("Alice", results[0].ObjectResults![0].Name);
+        Assert.Equal(42, results[0].ObjectResults![0].Value);
+    }
+
+    [Fact]
+    public void ReadFromFile_Stream_Headerless_SkipsLeadingRows_WhenRowsToSkipSet()
+    {
+        var sutH = new FileReaderServices<TestHeaderlessDto>(
+            _fileServicesMock.Object, new Mock<ILogger<FileReaderServices<TestHeaderlessDto>>>().Object, _blobClientFactoryMock.Object);
+        var csv = "skip this\r\nBob,7\r\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var results = sutH.ReadFromFile(stream, "stream.csv", Encoding.UTF8, firstLineContainsEncoding: false, rowsToSkip: 1, fileHasHeader: false);
+
+        Assert.Single(results);
+        Assert.Single(results[0].ObjectResults!);
+        Assert.Equal("Bob", results[0].ObjectResults![0].Name);
+        Assert.Equal(7, results[0].ObjectResults![0].Value);
+    }
+
+    [Fact]
     public void ReadFromFile_File_HeaderPresent_StillDelegatesToFileServices_WhenFileHasHeaderTrue()
     {
         File.WriteAllText(Path.Combine(_tempDir, "data.csv"), "Name\r\nAlice\r\n");
