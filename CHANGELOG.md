@@ -6,6 +6,7 @@ All notable changes to GenericFileServices are documented here.
 
 ### New features
 
+- **`IFileExportServices` — `List<T>` overloads** — four new overloads accept an already-materialised `List<T>` instead of a `Func<Task<List<T>>>` delegate: `ExportToFileAsync(…, List<T> data, …)` (delimiter and `CsvConfiguration` variants) and `ExportToBlobAsync(…, List<T> data, …)` (same two variants). All four delegate to the corresponding `Func` overloads internally, so archiving, error handling, and cancellation-token propagation are identical.
 - **`FileImportOptions.FileHasHeader`** — new `bool` property (default `true`). Set to `false` to import headerless CSV files; CsvHelper's `[Index]` attributes on the DTO type then determine column order. The underlying `IFileServices` delegation is bypassed in the headerless path; CsvHelper reads directly with `HasHeaderRecord = false`.
 - **`IFileReaderServices.ReadFromFile` — `fileHasHeader` parameter** — both the file-system and stream overloads now accept a trailing `bool fileHasHeader = true` parameter. Existing call sites are unaffected; pass `fileHasHeader: false` to activate headerless parsing.
 - **`FileImportOptions.FailIfNoRecords`** — new `bool` property (default `false`). Set to `true` for source-of-truth files that must never be empty; a parsed file with zero data records throws an `InvalidOperationException`, which is caught per-file and routes to `HandleFileError`.

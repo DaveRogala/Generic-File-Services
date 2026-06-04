@@ -811,4 +811,144 @@ public class FileExportServicesTests
         Assert.Single(errors);
         Assert.Contains("upload failed", errors[0]);
     }
+
+    // ── ExportToFileAsync (List<T> overload) ─────────────────────────────────
+
+    [Fact]
+    public async Task ExportToFileAsync_ListOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var data = new List<ExportTestDto> { new("Alice", 0) };
+
+        var errors = await _sut.ExportToFileAsync(BasePath, FileName, data, Encoding.UTF8);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ListOverload_PassesRecords_ToWriter()
+    {
+        var data = new List<ExportTestDto> { new("Alice", 0), new("Bob", 1) };
+        List<ExportTestDto>? captured = null;
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Callback<string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?>(
+                (_, _, records, _, _, _, _, _, _) => captured = records.ToList());
+
+        await _sut.ExportToFileAsync(BasePath, FileName, data, Encoding.UTF8);
+
+        Assert.NotNull(captured);
+        Assert.Equal(2, captured.Count);
+        Assert.Equal("Alice", captured[0].Name);
+        Assert.Equal("Bob", captured[1].Name);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ListOverload_ReturnsErrors_WhenWriterThrows()
+    {
+        var data = new List<ExportTestDto> { new("X", 0) };
+        _writerMock
+            .Setup(w => w.WriteToFile(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>()))
+            .Throws(new IOException("disk full"));
+
+        var errors = await _sut.ExportToFileAsync(BasePath, FileName, data, Encoding.UTF8);
+
+        Assert.Single(errors);
+        Assert.Contains("disk full", errors[0]);
+    }
+
+    [Fact]
+    public async Task ExportToFileAsync_ListOverload_CsvConfigOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        var data = new List<ExportTestDto> { new("Alice", 0) };
+
+        var errors = await _sut.ExportToFileAsync(BasePath, FileName, data, Encoding.UTF8, config);
+
+        Assert.Empty(errors);
+    }
+
+    // ── ExportToBlobAsync (List<T> overload) ─────────────────────────────────
+
+    [Fact]
+    public async Task ExportToBlobAsync_ListOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var data = new List<ExportTestDto> { new("Alice", 0) };
+
+        var errors = await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, data, Encoding.UTF8);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ListOverload_PassesRecords_ToWriter()
+    {
+        var data = new List<ExportTestDto> { new("Alice", 0), new("Bob", 1) };
+        List<ExportTestDto>? captured = null;
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IEnumerable<ExportTestDto>, Encoding, string, IReadOnlyDictionary<int, string>?, bool, bool, string?, CancellationToken>(
+                (_, _, _, records, _, _, _, _, _, _, _) => captured = records.ToList())
+            .Returns(Task.CompletedTask);
+
+        await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, data, Encoding.UTF8);
+
+        Assert.NotNull(captured);
+        Assert.Equal(2, captured.Count);
+        Assert.Equal("Alice", captured[0].Name);
+        Assert.Equal("Bob", captured[1].Name);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ListOverload_ReturnsErrors_WhenWriterThrows()
+    {
+        var data = new List<ExportTestDto> { new("X", 0) };
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(), It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("upload failed"));
+
+        var errors = await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, data, Encoding.UTF8);
+
+        Assert.Single(errors);
+        Assert.Contains("upload failed", errors[0]);
+    }
+
+    [Fact]
+    public async Task ExportToBlobAsync_ListOverload_CsvConfigOverload_ReturnsEmptyErrors_OnSuccess()
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+        var data = new List<ExportTestDto> { new("Alice", 0) };
+        _writerMock
+            .Setup(w => w.WriteToBlobAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IEnumerable<ExportTestDto>>(),
+                It.IsAny<Encoding>(),
+                It.IsAny<CsvConfiguration>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var errors = await _sut.ExportToBlobAsync(ConnStr, Container, BlobPath, data, Encoding.UTF8, config);
+
+        Assert.Empty(errors);
+    }
 }

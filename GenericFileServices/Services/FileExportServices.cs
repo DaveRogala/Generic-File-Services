@@ -88,6 +88,70 @@ public class FileExportServices<T, C>(
     }
 
     /// <inheritdoc/>
+    public Task<List<string>> ExportToFileAsync(
+        string basePath,
+        string fileName,
+        List<T> data,
+        Encoding encoding,
+        string delimiter = ",",
+        bool archiveExistingFile = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeHeader = true,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default) =>
+        ExportToFileAsync(basePath, fileName, () => Task.FromResult(data), encoding, delimiter, archiveExistingFile, archivePath, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<List<string>> ExportToFileAsync(
+        string basePath,
+        string fileName,
+        List<T> data,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        bool archiveExistingFile = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default) =>
+        ExportToFileAsync(basePath, fileName, () => Task.FromResult(data), encoding, csvConfiguration, archiveExistingFile, archivePath, metadataHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<List<string>> ExportToBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        List<T> data,
+        Encoding encoding,
+        string delimiter = ",",
+        bool archiveExistingBlob = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeHeader = true,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default) =>
+        ExportToBlobAsync(blobConnectionString, containerName, blobPath, () => Task.FromResult(data), encoding, delimiter, archiveExistingBlob, archivePath, metadataHeader, writeHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<List<string>> ExportToBlobAsync(
+        string blobConnectionString,
+        string containerName,
+        string blobPath,
+        List<T> data,
+        Encoding encoding,
+        CsvConfiguration csvConfiguration,
+        bool archiveExistingBlob = false,
+        string? archivePath = null,
+        IReadOnlyDictionary<int, string>? metadataHeader = null,
+        bool writeEncodingHeader = false,
+        string? encodingHeaderOverride = null,
+        CancellationToken cancellationToken = default) =>
+        ExportToBlobAsync(blobConnectionString, containerName, blobPath, () => Task.FromResult(data), encoding, csvConfiguration, archiveExistingBlob, archivePath, metadataHeader, writeEncodingHeader, encodingHeaderOverride, cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<List<string>> ExportToBlobAsync(
         string blobConnectionString,
         string containerName,
