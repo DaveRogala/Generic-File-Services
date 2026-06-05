@@ -16,6 +16,7 @@ All notable changes to GenericFileServices are documented here.
 
 ### Bug fixes
 
+- **`ArchiveExistingBlobAsync` 401 on private blobs in Azure** — `SyncCopyFromUriAsync` passes the plain blob URI to the Azure Storage service, which then issues an unauthenticated HTTP GET on that URI server-side. Private blobs return 401. Fixed by replacing the server-side copy with a streaming `DownloadStreamingAsync` → `UploadAsync` round-trip through the SDK's own auth pipeline. This approach works correctly with all credential types (account key, managed identity, SAS tokens) and does not buffer the full blob into memory.
 - **`RowsToSkip` ignored for headerless files** — when `FileHasHeader = false`, leading rows specified by `RowsToSkip` were silently discarded without being skipped; all rows were parsed as data. Fixed: the headerless reader now advances past `RowsToSkip` rows before collecting records, so `FileHasHeader = false` and `RowsToSkip > 0` are fully composable.
 
 ---

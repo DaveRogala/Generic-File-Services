@@ -512,13 +512,17 @@ public class FileWriterServicesTests : IDisposable
 
         sourceMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(exists, Mock.Of<Response>()));
-        sourceMock.Setup(b => b.Uri).Returns(new Uri("https://example.blob.core.windows.net/mycontainer/exports/out.csv"));
+        sourceMock.Setup(b => b.DownloadStreamingAsync(
+                It.IsAny<BlobDownloadOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Response.FromValue(
+                BlobsModelFactory.BlobDownloadStreamingResult(new MemoryStream()),
+                Mock.Of<Response>()));
         sourceMock.Setup(b => b.DeleteAsync(
                 It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Mock.Of<Response>());
-        archiveMock.Setup(b => b.SyncCopyFromUriAsync(
-                It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
+        archiveMock.Setup(b => b.UploadAsync(
+                It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
 
         return (sourceMock, archiveMock);
     }
@@ -526,11 +530,11 @@ public class FileWriterServicesTests : IDisposable
     [Fact]
     public async Task ArchiveExistingBlobAsync_DoesNothing_WhenBlobDoesNotExist()
     {
-        var (sourceMock, archiveMock) = SetupArchiveBlob(exists: false);
+        var (sourceMock, _) = SetupArchiveBlob(exists: false);
 
         await _sut.ArchiveExistingBlobAsync(ConnStr, Container, BlobPath);
 
-        archiveMock.Verify(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        sourceMock.Verify(b => b.DownloadStreamingAsync(It.IsAny<BlobDownloadOptions>(), It.IsAny<CancellationToken>()), Times.Never);
         sourceMock.Verify(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -539,15 +543,9 @@ public class FileWriterServicesTests : IDisposable
     {
         SetupArchiveBlob(exists: true);
         string? capturedPath = null;
-        _factoryMock
-            .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
-            .Callback<string, string, string>((_, _, p) => capturedPath = p)
-            .Returns(new Mock<BlobClient>().Object);
-
-        // Re-setup the archive mock return after callback override
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)
@@ -576,11 +574,15 @@ public class FileWriterServicesTests : IDisposable
 
         rootBlobMock.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-        rootBlobMock.Setup(b => b.Uri).Returns(new Uri("https://example.blob.core.windows.net/mycontainer/out.csv"));
+        rootBlobMock.Setup(b => b.DownloadStreamingAsync(
+                It.IsAny<BlobDownloadOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Response.FromValue(
+                BlobsModelFactory.BlobDownloadStreamingResult(new MemoryStream()),
+                Mock.Of<Response>()));
         rootBlobMock.Setup(b => b.DeleteAsync(It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Mock.Of<Response>());
-        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
 
         await _sut.ArchiveExistingBlobAsync(ConnStr, Container, rootBlob);
 
@@ -594,8 +596,8 @@ public class FileWriterServicesTests : IDisposable
         SetupArchiveBlob(exists: true);
         string? capturedPath = null;
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)
@@ -614,8 +616,8 @@ public class FileWriterServicesTests : IDisposable
         SetupArchiveBlob(exists: true);
         string? capturedPath = null;
         var archiveMock = new Mock<BlobClient>();
-        archiveMock.Setup(b => b.SyncCopyFromUriAsync(It.IsAny<Uri>(), It.IsAny<BlobCopyFromUriOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Mock.Of<Response<BlobCopyInfo>>());
+        archiveMock.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mock.Of<Response<BlobContentInfo>>());
         _factoryMock
             .Setup(f => f.GetBlobClient(ConnStr, Container, It.Is<string>(p => p != BlobPath)))
             .Callback<string, string, string>((_, _, p) => capturedPath = p)

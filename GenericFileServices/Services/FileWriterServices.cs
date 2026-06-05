@@ -177,7 +177,14 @@ public class FileWriterServices(ILogger<FileWriterServices> logger, IBlobClientF
         var archiveBlobPath = $"{resolvedArchiveDir}/{archivedFileName}";
         var archiveBlobClient = _blobClientFactory.GetBlobClient(blobConnectionString, containerName, archiveBlobPath);
 
-        await archiveBlobClient.SyncCopyFromUriAsync(blobClient.Uri, cancellationToken: cancellationToken);
+        // SyncCopyFromUriAsync with a plain URI returns 401 on private blobs in Azure because the
+        // storage service issues an unauthenticated HTTP GET on the source URI server-side.
+        // Streaming through the SDK auth pipeline works with every credential type (account key,
+        // managed identity, SAS tokens) and avoids buffering the whole blob into memory.
+        var download = await blobClient.DownloadStreamingAsync(cancellationToken: cancellationToken);
+        await using var content = download.Value.Content;
+        await archiveBlobClient.UploadAsync(content, overwrite: true, cancellationToken);
+
         await blobClient.DeleteAsync(cancellationToken: cancellationToken);
 
         _logger.LogInformation("Archived blob {BlobPath} to {ArchiveBlobPath}", blobPath, archiveBlobPath);
